@@ -1,19 +1,45 @@
 document.addEventListener('DOMContentLoaded', function() {
-    loadChats();
-    setupBackButton();
+    initializeChat();
 });
 
-function setupBackButton() {
-    const backButton = document.querySelector('.back-button');
-    if (backButton) {
-        backButton.addEventListener('click', () => {
-            const chatView = document.querySelector('.chat-view');
-            const chatListSection = document.querySelector('.chat-list-section');
-            
-            chatView.classList.add('hidden');
-            chatListSection.style.display = 'block';
-        });
-    }
+function initializeChat() {
+    try {
+        // Initialize UI elements
+        const chatView = document.getElementById('chatView');
+        const chatListSection = document.getElementById('chatListSection');
+        const backButton = document.getElementById('backButton');
+        const chatList = document.getElementById('chatList');
+        
+        // Verify all required elements exist
+        const requiredElements = {
+            chatView,
+            chatListSection,
+            backButton,
+            chatList
+        };
+
+        const missingElements = Object.entries(requiredElements)
+            .filter(([_, element]) => !element)
+            .map(([name]) => name);
+
+        if (missingElements.length > 0) {
+            throw new Error(`Missing required elements: ${missingElements.join(', ')}`);
+        }
+
+    // Setup back button
+    backButton.addEventListener('click', () => {
+        chatView.classList.add('hidden');
+        chatListSection.style.display = 'block';
+    });
+
+    // Load initial chats
+    loadChats().catch(error => {
+        console.error('Failed to load initial chats:', error);
+        const chatList = document.getElementById('chatList');
+        if (chatList) {
+            chatList.innerHTML = '<div class="error-message">Failed to load chats. Please refresh the page.</div>';
+        }
+    });
 }
 
 async function loadChats() {
@@ -71,18 +97,17 @@ function displayChats(chats) {
 
 async function loadChatMessages(sender, contactName) {
     try {
-        const chatView = document.querySelector('.chat-view');
-        const chatListSection = document.querySelector('.chat-list-section');
-        const contactNameElement = chatView.querySelector('.chat-contact-name');
-        const messagesContainer = document.querySelector('.messages-container');
+        const chatView = document.getElementById('chatView');
+        const chatListSection = document.getElementById('chatListSection');
+        const contactNameElement = document.getElementById('contactName');
+        const messagesContainer = document.getElementById('messagesContainer');
         
         if (!chatView || !chatListSection || !contactNameElement || !messagesContainer) {
-            console.error('Required DOM elements not found');
-            return;
+            throw new Error('Required DOM elements not found');
         }
 
-        // Clear previous messages
-        messagesContainer.innerHTML = '';
+        // Clear previous messages and show loading state
+        messagesContainer.innerHTML = '<div class="loading">Loading messages...</div>';
         
         // Update contact info
         contactNameElement.textContent = contactName;
