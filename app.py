@@ -102,9 +102,9 @@ def init_db():
             if not Contact.query.first():
                 # Sample contacts
                 contacts = [
-                    Contact(name='Alice Smith', avatar='avatar1.png', last_message='Hey, how are you?', unread=True),
-                    Contact(name='Bob Johnson', avatar='avatar2.png', last_message='Meeting at 3pm', unread=False),
-                    Contact(name='Carol Williams', avatar='avatar3.png', last_message='Thanks!', unread=True)
+                    Contact(name='Alice Smith', avatar='/static/images/avatar.png', last_message='Hey, how are you?', unread=True),
+                    Contact(name='Bob Johnson', avatar='/static/images/avatar.png', last_message='Meeting at 3pm', unread=False),
+                    Contact(name='Carol Williams', avatar='/static/images/avatar.png', last_message='Thanks!', unread=True)
                 ]
                 db.session.add_all(contacts)
                 # Commit contacts first
