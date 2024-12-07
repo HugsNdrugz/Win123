@@ -1,7 +1,6 @@
 {pkgs}: {
   deps = [
-    pkgs.unzip
     pkgs.postgresql
-    pkgs.openssl
+    pkgs.unzipNLS
   ];
 }

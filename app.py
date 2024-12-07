@@ -1,8 +1,7 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify
+import sqlite3
+from datetime import datetime
 import os
-from flask_sqlalchemy import SQLAlchemy
-from db import db
-from models import Contact, InstalledApp, Call, SMS, ChatMessage, Keylog
 import logging
 
 # Configure logging
@@ -10,183 +9,124 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
+db_path = os.path.join(os.getcwd(), 'data.db')
 
-def inspect_db_schema():
+def get_db():
+    db = sqlite3.connect(db_path)
+    db.row_factory = sqlite3.Row
+    return db
+
+def format_datetime(timestamp):
     try:
-        with app.app_context():
-            # Get all table names
-            tables = db.session.execute(db.text("SELECT name FROM sqlite_master WHERE type='table';")).fetchall()
-            logger.info("Database Tables:")
-            for table in tables:
-                table_name = table[0]
-                # Get table schema
-                schema = db.session.execute(db.text(f"PRAGMA table_info({table_name});")).fetchall()
-                logger.info(f"\nTable: {table_name}")
-                for col in schema:
-                    logger.info(f"Column: {col}")
-    except Exception as e:
-        logger.error(f"Error inspecting database schema: {e}")
+        if isinstance(timestamp, str):
+            dt_object = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+        else:
+            dt_object = datetime.fromtimestamp(timestamp)
+        return dt_object.strftime("%b %d, %I:%M %p")
+    except (ValueError, TypeError) as e:
+        logger.error(f"Error formatting timestamp {timestamp}: {str(e)}")
+        return str(timestamp)
 
+# Route: Home page
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# API: Get all chats
 @app.route('/api/chats')
 def get_chats():
     try:
-        # Get unique senders and their latest messages
-        chat_messages = db.session.execute(
-            db.text("""
-                SELECT 
-                    cm.messenger,
-                    cm.text as last_message,
-                    cm.time as last_time,
-                    COUNT(*) as message_count,
-                    cm.sender as name,
-                    ROW_NUMBER() OVER (ORDER BY cm.time DESC) as conversation_id
-                FROM ChatMessages cm
-                GROUP BY cm.messenger
-                ORDER BY last_time DESC
-            """)
-        ).fetchall()
+        db = get_db()
+        cursor = db.cursor()
         
-        chat_data = [{
-            'avatar': 'avatar.png',
-            'conversation_id': msg.contact_id or idx + 1,
-            'name': msg.name or msg.sender,
-            'last_message': msg.last_message,
-            'unread': False,
-            'timestamp': msg.last_time
-        } for idx, msg in enumerate(chat_messages)]
-        return jsonify(chat_data)
+        # Query to get all conversations with their latest messages
+        query = """
+            WITH LatestMessages AS (
+                SELECT 
+                    sms_type as sender_name,
+                    text,
+                    time,
+                    ROW_NUMBER() OVER (PARTITION BY sms_type ORDER BY time DESC) as rn
+                FROM SMS
+                UNION ALL
+                SELECT 
+                    sender as sender_name,
+                    text,
+                    time,
+                    ROW_NUMBER() OVER (PARTITION BY sender ORDER BY time DESC) as rn
+                FROM ChatMessages
+            )
+            SELECT 
+                sender_name as name,
+                text as last_message,
+                time,
+                'avatar.png' as avatar,
+                1 as unread
+            FROM LatestMessages
+            WHERE rn = 1
+            ORDER BY time DESC
+        """
+        
+        cursor.execute(query)
+        chats = [dict(row) for row in cursor.fetchall()]
+        
+        return jsonify(chats)
     except Exception as e:
         logger.error(f"Error fetching chats: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/messages/<int:contact_id>')
-def get_messages(contact_id):
+# API: Get messages for a conversation
+@app.route('/api/messages/<sender>')
+def get_messages(sender):
     try:
-        messages = ChatMessage.query.filter(
-            ChatMessage.messenger == str(contact_id)  # Using contact_id as messenger identifier
-        ).order_by(ChatMessage.time.asc()).all()
+        db = get_db()
+        cursor = db.cursor()
         
-        return jsonify([{
-            'id': msg.message_id,
-            'text': msg.text,
-            'time': msg.time.strftime('%Y-%m-%d %H:%M:%S'),
-            'sender': 'user' if msg.sender == 'user' else 'contact'
-        } for msg in messages])
+        query = """
+            SELECT 
+                text,
+                time,
+                CASE 
+                    WHEN type = 'SMS' THEN 'received'
+                    ELSE 'sent'
+                END as sender
+            FROM (
+                SELECT text, time, 'SMS' as type FROM SMS WHERE sms_type = ?
+                UNION ALL
+                SELECT text, time, 'Chat' as type FROM ChatMessages WHERE sender = ?
+            )
+            ORDER BY time ASC
+        """
+        
+        cursor.execute(query, (sender, sender))
+        messages = [dict(row) for row in cursor.fetchall()]
+        
+        return jsonify(messages)
     except Exception as e:
         logger.error(f"Error fetching messages: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/sms')
-def get_sms():
-    try:
-        messages = SMSMessage.query.filter_by(
-            is_archived=False
-        ).order_by(SMSMessage.timestamp.desc()).all()
-        
-        return jsonify([{
-            'id': msg.id,
-            'phone_number': msg.phone_number,
-            'content': msg.content,
-            'time': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-            'sender_id': msg.sender_id
-        } for msg in messages])
-    except Exception as e:
-        logger.error(f"Error fetching SMS messages: {e}")
-        return jsonify({'error': str(e)}), 500
+# Route: Calls View
+@app.route('/calls')
+def calls():
+    query = "SELECT call_type, from_to, time, duration FROM Calls ORDER BY time DESC"
+    calls = fetch_query(query)
+    formatted_calls = [
+        {"type": call_type, "from_to": from_to, "time": format_datetime(time), "duration": duration}
+        for call_type, from_to, time, duration in calls
+    ]
+    return render_template('calls.html', calls=formatted_calls)
 
-@app.route('/api/calls')
-def get_calls():
-    try:
-        calls = CallLog.query.filter_by(
-            is_archived=False
-        ).order_by(CallLog.start_time.desc()).all()
-        
-        return jsonify([{
-            'id': call.id,
-            'caller_id': call.caller_id,
-            'receiver_id': call.receiver_id,
-            'duration': call.duration,
-            'start_time': call.start_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'call_type': call.call_type
-        } for call in calls])
-    except Exception as e:
-        logger.error(f"Error fetching calls: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/archived')
-def get_archived():
-    try:
-        archived_items = ArchivedItem.query.order_by(ArchivedItem.archive_date.desc()).all()
-        
-        archived_data = []
-        for item in archived_items:
-            if item.item_type == 'chat':
-                message = ChatMessage.query.get(item.item_id)
-                if message:
-                    archived_data.append({
-                        'type': 'chat',
-                        'content': message.content,
-                        'archive_date': item.archive_date.strftime('%Y-%m-%d %H:%M:%S')
-                    })
-            elif item.item_type == 'sms':
-                message = SMSMessage.query.get(item.item_id)
-                if message:
-                    archived_data.append({
-                        'type': 'sms',
-                        'content': message.content,
-                        'archive_date': item.archive_date.strftime('%Y-%m-%d %H:%M:%S')
-                    })
-            elif item.item_type == 'call':
-                call = CallLog.query.get(item.item_id)
-                if call:
-                    archived_data.append({
-                        'type': 'call',
-                        'content': f"{call.duration} seconds {call.call_type} call",
-                        'archive_date': item.archive_date.strftime('%Y-%m-%d %H:%M:%S')
-                    })
-        
-        return jsonify(archived_data)
-    except Exception as e:
-        logger.error(f"Error fetching archived items: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/statistics')
-def get_statistics():
-    try:
-        # Get monthly message counts and unique senders
-        stats = db.session.execute(
-            db.text("""
-                SELECT 
-                    strftime('%Y-%m', time) as month,
-                    COUNT(*) as message_count,
-                    COUNT(DISTINCT sender) as unique_senders
-                FROM ChatMessages
-                GROUP BY strftime('%Y-%m', time)
-                ORDER BY month DESC
-                LIMIT 12
-            """)
-        ).fetchall()
-        
-        return jsonify([{
-            'month': row[0],
-            'message_count': row[1],
-            'unique_senders': row[2]
-        } for row in stats])
-    except Exception as e:
-        logger.error(f"Error fetching statistics: {e}")
-        return jsonify({'error': str(e)}), 500
-
-# Initialize database with schema and inspect it
-with app.app_context():
-    db.create_all()
-    inspect_db_schema()
+# Route: Apps View
+@app.route('/apps')
+def apps():
+    query = "SELECT application_name, install_date FROM InstalledApps ORDER BY install_date DESC"
+    apps = fetch_query(query)
+    formatted_apps = [
+        {"name": app_name, "date": format_datetime(install_date)}
+        for app_name, install_date in apps
+    ]
+    return render_template('apps.html', apps=formatted_apps)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True)
