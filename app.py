@@ -41,15 +41,14 @@ def get_chats():
         chat_messages = db.session.execute(
             db.text("""
                 SELECT 
-                    cm.sender,
+                    cm.messenger,
                     cm.text as last_message,
                     cm.time as last_time,
                     COUNT(*) as message_count,
-                    c.name,
-                    c.contact_id
+                    cm.sender as name,
+                    ROW_NUMBER() OVER (ORDER BY cm.time DESC) as conversation_id
                 FROM ChatMessages cm
-                LEFT JOIN Contacts c ON cm.sender = c.name
-                GROUP BY cm.sender
+                GROUP BY cm.messenger
                 ORDER BY last_time DESC
             """)
         ).fetchall()
@@ -70,14 +69,9 @@ def get_chats():
 @app.route('/api/messages/<int:contact_id>')
 def get_messages(contact_id):
     try:
-        contact = Contact.query.get(contact_id)
-        if contact:
-            messages = ChatMessage.query.filter(
-                (ChatMessage.sender == contact.name) |
-                (ChatMessage.sender == "user")  # Assuming "user" represents current user's messages
-            ).order_by(ChatMessage.time.asc()).all()
-        else:
-            messages = []
+        messages = ChatMessage.query.filter(
+            ChatMessage.messenger == str(contact_id)  # Using contact_id as messenger identifier
+        ).order_by(ChatMessage.time.asc()).all()
         
         return jsonify([{
             'id': msg.message_id,
