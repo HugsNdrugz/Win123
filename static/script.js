@@ -66,9 +66,21 @@ function openChatView(conversationId, name, avatar) {
     loadChatMessages(conversationId);
 }
 
-async function loadChatMessages(conversationId) {
+async function loadChatMessages(conversationId, contactName, avatar) {
     try {
-        const response = await fetch(`/api/messages/${conversationId}`);
+        const chatView = document.querySelector('.chat-view');
+        const contactAvatar = chatView.querySelector('.chat-contact-avatar');
+        const contactNameElement = chatView.querySelector('.chat-contact-name');
+        
+        // Update contact info
+        contactAvatar.src = avatar;
+        contactNameElement.textContent = contactName;
+        
+        // Show chat view
+        chatView.classList.remove('hidden');
+        chatView.classList.add('active');
+        
+        const response = await fetch(`/api/messages/${encodeURIComponent(conversationId)}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -76,6 +88,7 @@ async function loadChatMessages(conversationId) {
         displayMessages(messages);
     } catch (error) {
         console.error('Error loading messages:', error);
+        alert('Failed to load messages. Please try again.');
     }
 }
 
@@ -134,8 +147,13 @@ async function loadChatMessages(conversationId, contactName, avatar) {
 
 function displayMessages(messages) {
     const messagesContainer = document.querySelector('.messages-container');
+    if (!messagesContainer) {
+        console.error('Messages container not found');
+        return;
+    }
+    
     messagesContainer.innerHTML = messages.map(message => `
-        <div class="message ${message.sender === 'user' ? 'sent' : 'received'}">
+        <div class="message ${message.sender === 'sent' ? 'sent' : 'received'}">
             <div class="message-content">
                 <p>${message.text}</p>
                 <span class="message-time">${message.time}</span>
