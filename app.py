@@ -37,47 +37,53 @@ def index():
 @app.route('/api/chats')
 def get_chats():
     try:
-        # Adding some sample data for testing
-        chat_data = [
-            {
-                'avatar': 'avatar1.png',
-                'conversation_id': 1,
-                'name': 'Alice Smith',
-                'last_message': 'Hey, how are you?',
-                'unread': True
-            },
-            {
-                'avatar': 'avatar2.png',
-                'conversation_id': 2,
-                'name': 'Bob Johnson',
-                'last_message': 'Meeting at 3pm',
-                'unread': False
-            },
-            {
-                'avatar': 'avatar3.png',
-                'conversation_id': 3,
-                'name': 'Carol Williams',
-                'last_message': 'Thanks!',
-                'unread': True
-            }
-        ]
+        # Get unique senders and their latest messages
+        chat_messages = db.session.execute(
+            db.text("""
+                SELECT 
+                    cm.sender,
+                    cm.text as last_message,
+                    cm.time as last_time,
+                    COUNT(*) as message_count,
+                    c.name,
+                    c.contact_id
+                FROM ChatMessages cm
+                LEFT JOIN Contacts c ON cm.sender = c.name
+                GROUP BY cm.sender
+                ORDER BY last_time DESC
+            """)
+        ).fetchall()
+        
+        chat_data = [{
+            'avatar': 'avatar.png',
+            'conversation_id': msg.contact_id or idx + 1,
+            'name': msg.name or msg.sender,
+            'last_message': msg.last_message,
+            'unread': False,
+            'timestamp': msg.last_time
+        } for idx, msg in enumerate(chat_messages)]
         return jsonify(chat_data)
     except Exception as e:
         logger.error(f"Error fetching chats: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/messages/<string:messenger>')
-def get_messages(messenger):
+@app.route('/api/messages/<int:contact_id>')
+def get_messages(contact_id):
     try:
-        messages = ChatMessage.query.filter_by(
-            messenger=messenger
-        ).order_by(ChatMessage.time.desc()).all()
+        contact = Contact.query.get(contact_id)
+        if contact:
+            messages = ChatMessage.query.filter(
+                (ChatMessage.sender == contact.name) |
+                (ChatMessage.sender == "user")  # Assuming "user" represents current user's messages
+            ).order_by(ChatMessage.time.asc()).all()
+        else:
+            messages = []
         
         return jsonify([{
             'id': msg.message_id,
             'text': msg.text,
             'time': msg.time.strftime('%Y-%m-%d %H:%M:%S'),
-            'sender': msg.sender
+            'sender': 'user' if msg.sender == 'user' else 'contact'
         } for msg in messages])
     except Exception as e:
         logger.error(f"Error fetching messages: {e}")
@@ -161,17 +167,18 @@ def get_archived():
 def get_statistics():
     try:
         # Get monthly message counts and unique senders
-        stats = db.session.execute("""
-            SELECT 
-                strftime('%Y-%m', timestamp) as month,
-                COUNT(*) as message_count,
-                COUNT(DISTINCT sender_id) as unique_senders
-            FROM chat_messages
-            WHERE NOT is_archived
-            GROUP BY strftime('%Y-%m', timestamp)
-            ORDER BY month DESC
-            LIMIT 12
-        """).fetchall()
+        stats = db.session.execute(
+            db.text("""
+                SELECT 
+                    strftime('%Y-%m', time) as month,
+                    COUNT(*) as message_count,
+                    COUNT(DISTINCT sender) as unique_senders
+                FROM ChatMessages
+                GROUP BY strftime('%Y-%m', time)
+                ORDER BY month DESC
+                LIMIT 12
+            """)
+        ).fetchall()
         
         return jsonify([{
             'month': row[0],
