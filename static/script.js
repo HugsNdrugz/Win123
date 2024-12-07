@@ -26,20 +26,23 @@ function initializeChat() {
             throw new Error(`Missing required elements: ${missingElements.join(', ')}`);
         }
 
-    // Setup back button
-    backButton.addEventListener('click', () => {
-        chatView.classList.add('hidden');
-        chatListSection.style.display = 'block';
-    });
+        // Setup back button
+        backButton.addEventListener('click', () => {
+            chatView.classList.add('hidden');
+            chatListSection.style.display = 'block';
+        });
 
-    // Load initial chats
-    loadChats().catch(error => {
-        console.error('Failed to load initial chats:', error);
-        const chatList = document.getElementById('chatList');
-        if (chatList) {
-            chatList.innerHTML = '<div class="error-message">Failed to load chats. Please refresh the page.</div>';
-        }
-    });
+        // Load initial chats
+        loadChats().catch(error => {
+            console.error('Failed to load initial chats:', error);
+            if (chatList) {
+                chatList.innerHTML = '<div class="error-message">Failed to load chats. Please refresh the page.</div>';
+            }
+        });
+    } catch (error) {
+        console.error('Error initializing chat:', error);
+        document.body.innerHTML = '<div class="error-message">Failed to initialize chat interface. Please refresh the page.</div>';
+    }
 }
 
 async function loadChats() {
@@ -57,8 +60,7 @@ async function loadChats() {
         displayChats(chats);
     } catch (error) {
         console.error('Error loading chats:', error);
-        // Show error message to user
-        const chatList = document.querySelector('.chat-list');
+        const chatList = document.getElementById('chatList');
         if (chatList) {
             chatList.innerHTML = '<div class="error-message">Unable to load chats. Please try again later.</div>';
         }
@@ -66,7 +68,7 @@ async function loadChats() {
 }
 
 function displayChats(chats) {
-    const chatList = document.querySelector('.chat-list');
+    const chatList = document.getElementById('chatList');
     if (!chatList) {
         console.error('Chat list container not found');
         return;
@@ -130,7 +132,7 @@ async function loadChatMessages(sender, contactName) {
         displayMessages(data);
     } catch (error) {
         console.error('Error loading messages:', error);
-        const messagesContainer = document.querySelector('.messages-container');
+        const messagesContainer = document.getElementById('messagesContainer');
         if (messagesContainer) {
             messagesContainer.innerHTML = '<div class="error-message">Failed to load messages. Please try again.</div>';
         }
@@ -138,7 +140,7 @@ async function loadChatMessages(sender, contactName) {
 }
 
 function displayMessages(messages) {
-    const messagesContainer = document.querySelector('.messages-container');
+    const messagesContainer = document.getElementById('messagesContainer');
     if (!messagesContainer) {
         console.error('Messages container not found');
         return;
