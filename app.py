@@ -133,48 +133,22 @@ def get_messages(sender):
 def calls():
     query = "SELECT call_type, from_to, time, duration FROM Calls ORDER BY time DESC"
     calls = fetch_query(query)
-    formatted_calls = []
-    if calls:
-        for call_type, from_to, time, duration in calls:
-            try:
-                formatted_time = format_datetime(time)
-                formatted_calls.append({
-                    "type": call_type or "Unknown",
-                    "from_to": from_to,
-                    "time": formatted_time,
-                    "duration": duration
-                })
-            except Exception as e:
-                logger.error(f"Error formatting call data: {e}")
-                continue
+    formatted_calls = [
+        {"type": call_type, "from_to": from_to, "time": format_datetime(time), "duration": duration}
+        for call_type, from_to, time, duration in calls
+    ]
     return render_template('calls.html', calls=formatted_calls)
 
 # Route: Apps View
 @app.route('/apps')
 def apps():
-    try:
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute("SELECT application_name, install_date FROM InstalledApps ORDER BY install_date DESC")
-        apps_data = cursor.fetchall()
-        
-        formatted_apps = []
-        if apps_data:
-            for app_name, install_date in apps_data:
-                try:
-                    formatted_time = format_datetime(install_date)
-                    formatted_apps.append({
-                        "name": app_name,
-                        "date": formatted_time
-                    })
-                except Exception as e:
-                    logger.error(f"Error formatting app data: {e}")
-                    continue
-        
-        return render_template('apps.html', apps=formatted_apps)
-    except Exception as e:
-        logger.error(f"Error in apps route: {e}")
-        return render_template('apps.html', apps=[], error="Unable to load apps data")
+    query = "SELECT application_name, install_date FROM InstalledApps ORDER BY install_date DESC"
+    apps = fetch_query(query)
+    formatted_apps = [
+        {"name": app_name, "date": format_datetime(install_date)}
+        for app_name, install_date in apps
+    ]
+    return render_template('apps.html', apps=formatted_apps)
 
 if __name__ == '__main__':
     app.run(debug=True)
