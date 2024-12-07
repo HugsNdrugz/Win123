@@ -85,11 +85,11 @@ def get_messages(sender):
         query = """
             SELECT 
                 text,
-                time,
+                datetime(time, 'unixepoch') as formatted_time,
                 CASE 
                     WHEN type = 'SMS' THEN 'received'
                     ELSE 'sent'
-                END as sender
+                END as message_type
             FROM (
                 SELECT text, time, 'SMS' as type FROM SMS WHERE sms_type = ?
                 UNION ALL

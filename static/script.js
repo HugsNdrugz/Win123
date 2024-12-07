@@ -177,16 +177,19 @@ function displayMessages(messages) {
     }
     
     messagesContainer.innerHTML = messages.map(message => `
-        <div class="message ${message.sender === 'sent' ? 'sent' : 'received'}">
+        <div class="message ${message.message_type}">
             <div class="message-content">
                 <p>${message.text}</p>
-                <span class="message-time">${message.time}</span>
+                <span class="message-time">${message.formatted_time}</span>
             </div>
         </div>
     `).join('');
     
-    // Scroll to bottom
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    // Clear any existing scroll position and scroll to bottom
+    messagesContainer.scrollTop = 0;
+    setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, 100);
 }
 
 // Add back button functionality
