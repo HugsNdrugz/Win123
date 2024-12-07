@@ -11,6 +11,10 @@ async function loadChats() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const chats = await response.json();
+        console.log("Received chat data:", chats);
+        if (chats.length === 0) {
+            console.warn("No chat data received");
+        }
         displayChats(chats);
     } catch (error) {
         console.error('Error loading chats:', error);
@@ -21,7 +25,7 @@ function displayChats(chats) {
     const chatList = document.querySelector('.chat-list');
     chatList.innerHTML = chats.map(chat => `
         <div class="chat-item" data-conversation-id="${chat.conversation_id}">
-            <img src="${chat.avatar}" 
+            <img src="/static/images/${chat.avatar}" 
                  alt="${chat.name}'s avatar" 
                  onerror="this.src='/static/images/avatar.png'; this.classList.add('error');">
             <div class="chat-info">
@@ -38,11 +42,41 @@ function displayChats(chats) {
             const conversationId = item.dataset.conversationId;
             const name = item.querySelector('h3').textContent;
             const avatar = item.querySelector('img').src;
-            loadChatMessages(conversationId, name, avatar);
+            openChatView(conversationId, name, avatar);
             // Mark as read
             item.querySelector('.unread-badge')?.remove();
         });
     });
+}
+
+function openChatView(conversationId, name, avatar) {
+    const chatView = document.querySelector('.chat-view');
+    const contactAvatar = chatView.querySelector('.chat-contact-avatar');
+    const contactName = chatView.querySelector('.chat-contact-name');
+    
+    // Update contact info
+    contactAvatar.src = avatar;
+    contactName.textContent = name;
+    
+    // Show chat view
+    chatView.classList.remove('hidden');
+    chatView.classList.add('active');
+    
+    // Load messages
+    loadChatMessages(conversationId);
+}
+
+async function loadChatMessages(conversationId) {
+    try {
+        const response = await fetch(`/api/messages/${conversationId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const messages = await response.json();
+        displayMessages(messages);
+    } catch (error) {
+        console.error('Error loading messages:', error);
+    }
 }
 
 function switchSection(sectionId) {

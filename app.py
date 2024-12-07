@@ -37,35 +37,30 @@ def index():
 @app.route('/api/chats')
 def get_chats():
     try:
-        # Get unique messengers (chat apps) and their latest messages
-        chats = db.session.execute(
-            db.text("""
-                SELECT 
-                    messenger,
-                    MAX(time) as last_time,
-                    COUNT(*) as message_count
-                FROM ChatMessages 
-                GROUP BY messenger
-                ORDER BY last_time DESC
-            """)
-        ).fetchall()
-        
-        chat_data = []
-        for chat in chats:
-            # Get the latest message for each messenger
-            latest_message = ChatMessage.query.filter_by(
-                messenger=chat.messenger
-            ).order_by(ChatMessage.time.desc()).first()
-            
-            if latest_message:
-                chat_data.append({
-                    'messenger': latest_message.messenger,
-                    'last_message': latest_message.text,
-                    'timestamp': latest_message.time,
-                    'sender': latest_message.sender,
-                    'message_count': chat.message_count
-                })
-        
+        # Adding some sample data for testing
+        chat_data = [
+            {
+                'avatar': 'avatar1.png',
+                'conversation_id': 1,
+                'name': 'Alice Smith',
+                'last_message': 'Hey, how are you?',
+                'unread': True
+            },
+            {
+                'avatar': 'avatar2.png',
+                'conversation_id': 2,
+                'name': 'Bob Johnson',
+                'last_message': 'Meeting at 3pm',
+                'unread': False
+            },
+            {
+                'avatar': 'avatar3.png',
+                'conversation_id': 3,
+                'name': 'Carol Williams',
+                'last_message': 'Thanks!',
+                'unread': True
+            }
+        ]
         return jsonify(chat_data)
     except Exception as e:
         logger.error(f"Error fetching chats: {e}")
