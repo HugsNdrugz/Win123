@@ -94,22 +94,35 @@ def get_messages(sender):
         query = """
             SELECT 
                 text,
-                datetime(time, 'unixepoch') as formatted_time,
+                CASE
+                    WHEN time LIKE '%+%' THEN datetime(strftime('%s', substr(time, 1, instr(time, '+') - 1)), 'unixepoch')
+                    ELSE datetime(time, 'unixepoch')
+                END as formatted_time,
                 CASE 
                     WHEN type = 'SMS' THEN 'received'
                     ELSE 'sent'
                 END as message_type
             FROM (
-                SELECT text, time, 'SMS' as type FROM SMS WHERE sms_type = ?
+                SELECT text, time, 'SMS' as type 
+                FROM SMS 
+                WHERE sms_type = ?
                 UNION ALL
-                SELECT text, time, 'Chat' as type FROM ChatMessages WHERE sender = ?
+                SELECT text, time, 'Chat' as type 
+                FROM ChatMessages 
+                WHERE sender = ?
             )
             ORDER BY time ASC
         """
         
         cursor.execute(query, (sender, sender))
-        messages = [dict(row) for row in cursor.fetchall()]
+        messages = []
+        for row in cursor.fetchall():
+            message = {}
+            for idx, col in enumerate(cursor.description):
+                message[col[0]] = row[idx]
+            messages.append(message)
         
+        logger.debug(f"Retrieved messages for {sender}: {messages}")
         return jsonify(messages)
     except Exception as e:
         logger.error(f"Error fetching messages: {e}")

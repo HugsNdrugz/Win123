@@ -74,6 +74,15 @@ async function loadChatMessages(sender, contactName) {
         const chatView = document.querySelector('.chat-view');
         const chatListSection = document.querySelector('.chat-list-section');
         const contactNameElement = chatView.querySelector('.chat-contact-name');
+        const messagesContainer = document.querySelector('.messages-container');
+        
+        if (!chatView || !chatListSection || !contactNameElement || !messagesContainer) {
+            console.error('Required DOM elements not found');
+            return;
+        }
+
+        // Clear previous messages
+        messagesContainer.innerHTML = '';
         
         // Update contact info
         contactNameElement.textContent = contactName;
@@ -83,14 +92,23 @@ async function loadChatMessages(sender, contactName) {
         chatView.classList.remove('hidden');
         
         const response = await fetch(`/api/messages/${encodeURIComponent(sender)}`);
+        const data = await response.json();
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
         }
-        const messages = await response.json();
-        displayMessages(messages);
+        
+        if (!Array.isArray(data)) {
+            throw new Error('Invalid message data received');
+        }
+        
+        displayMessages(data);
     } catch (error) {
         console.error('Error loading messages:', error);
-        alert('Failed to load messages. Please try again.');
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+            messagesContainer.innerHTML = '<div class="error-message">Failed to load messages. Please try again.</div>';
+        }
     }
 }
 
