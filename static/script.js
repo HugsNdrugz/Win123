@@ -152,3 +152,34 @@ document.addEventListener('DOMContentLoaded', () => {
 function closeSettings() {
     switchSection('chats');
 }
+
+// Handle sending messages
+document.getElementById('send-message').addEventListener('click', sendMessage);
+document.getElementById('message-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+});
+
+function sendMessage() {
+    const input = document.getElementById('message-input');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    // Clear input
+    input.value = '';
+    
+    // Add message to UI immediately for better UX
+    const messagesContainer = document.querySelector('.messages-container');
+    const messageElement = document.createElement('div');
+    messageElement.className = 'message sent';
+    messageElement.innerHTML = `
+        <div class="message-content">
+            <p>${text}</p>
+            <span class="message-time">${new Date().toLocaleTimeString()}</span>
+        </div>
+    `;
+    messagesContainer.appendChild(messageElement);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
