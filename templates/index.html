@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Interface - Data Visualization</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <img src="{{ url_for('static', filename='icons/messenger.svg') }}" alt="Messenger Logo" class="messenger-logo">
+        <ul>
+            <li data-section="chats" class="active">
+                <i data-feather="message-square"></i>
+            </li>
+            <li data-section="statistics">
+                <i data-feather="bar-chart-2"></i>
+            </li>
+            <li data-section="requests">
+                <i data-feather="user-plus"></i>
+            </li>
+            <li data-section="archived">
+                <i data-feather="archive"></i>
+            </li>
+        </ul>
+        <ul class="bottom-menu">
+            <li data-section="settings">
+                <img src="https://via.placeholder.com/50" alt="Profile" id="profile-icon" class="profile-icon">
+            </li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div id="chats" class="section active">
+            <div class="top-bar">
+                <h1>Chats</h1>
+                <div class="right-icons">
+                    <i data-feather="edit"></i>
+                </div>
+            </div>
+            <input type="text" id="search" placeholder="Search Messenger">
+            <div class="chat-list"></div>
+        </div>
+
+        <div id="statistics" class="section hidden">
+            <div class="top-bar">
+                <h1>Chat Statistics</h1>
+            </div>
+            <div class="stats-container">
+                <div id="monthly-messages-chart" class="chart"></div>
+                <div id="active-users-chart" class="chart"></div>
+            </div>
+        </div>
+
+        <div id="requests" class="section hidden">
+            <div class="top-bar">
+                <h1>Requests</h1>
+            </div>
+            <div class="request-list"></div>
+        </div>
+
+        <div id="archived" class="section hidden">
+            <div class="top-bar">
+                <h1>Archived chats</h1>
+            </div>
+            <div class="archived-list"></div>
+        </div>
+
+        <div id="settings" class="section hidden">
+            <div class="top-bar">
+                <h1>Settings</h1>
+                <div class="right-icons">
+                    <i data-feather="x" onclick="closeSettings()"></i>
+                </div>
+            </div>
+            <div class="settings-content"></div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='visualizations.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
