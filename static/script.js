@@ -1,7 +1,15 @@
-// Initialize feather icons
 document.addEventListener('DOMContentLoaded', function() {
-    feather.replace();
     loadChats();
+    
+    // Add back button handler
+    const backButton = document.querySelector('.back-button');
+    if (backButton) {
+        backButton.addEventListener('click', () => {
+            const chatView = document.querySelector('.chat-view');
+            chatView.classList.add('hidden');
+            chatView.classList.remove('active');
+        });
+    }
 });
 
 async function loadChats() {
@@ -23,8 +31,13 @@ async function loadChats() {
 
 function displayChats(chats) {
     const chatList = document.querySelector('.chat-list');
+    if (!chatList) {
+        console.error('Chat list container not found');
+        return;
+    }
+    
     chatList.innerHTML = chats.map(chat => `
-        <div class="chat-item" data-conversation-id="${chat.conversation_id}">
+        <div class="chat-item" data-sender="${chat.name}">
             <img src="/static/images/${chat.avatar}" 
                  alt="${chat.name}'s avatar" 
                  onerror="this.src='/static/images/avatar.png'; this.classList.add('error');">
@@ -35,6 +48,17 @@ function displayChats(chats) {
             </div>
         </div>
     `).join('');
+
+    // Add click handlers for chat items
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const sender = item.dataset.sender;
+            const name = item.querySelector('h3').textContent;
+            const avatar = item.querySelector('img').src;
+            loadChatMessages(sender, name, avatar);
+        });
+    });
+}
 
     // Add click handlers for chat items
     document.querySelectorAll('.chat-item').forEach(item => {

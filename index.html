@@ -1,6 +1,18 @@
 
 {% extends "layout.html" %}
 {% block content %}
-    <h2>Welcome to the Chat App</h2>
-    <p>Navigate through the tabs to view Messages, Calls, and Apps.</p>
+    <div class="chat-container">
+        <!-- Chat List -->
+        <div class="chat-list"></div>
+        
+        <!-- Chat View -->
+        <div class="chat-view hidden">
+            <div class="chat-header">
+                <button class="back-button">&larr;</button>
+                <img class="chat-contact-avatar" src="/static/images/avatar.png" alt="Contact Avatar">
+                <span class="chat-contact-name"></span>
+            </div>
+            <div class="messages-container"></div>
+        </div>
+    </div>
 {% endblock %}
