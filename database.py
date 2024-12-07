@@ -31,7 +31,7 @@ def get_db_connection():
     finally:
         conn.close()
 
-def get_chat_data():
+def get_chat_messages():
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -40,26 +40,76 @@ def get_chat_data():
                     conversation_id,
                     MAX(timestamp) as last_message_time,
                     COUNT(*) as message_count
-                FROM messages 
+                FROM chat_messages 
+                WHERE NOT is_archived
                 GROUP BY conversation_id
                 ORDER BY last_message_time DESC
             """)
             return [dict(row) for row in cursor.fetchall()]
     except Exception as e:
-        logging.error(f"Error fetching chat data: {e}")
+        logging.error(f"Error fetching chat messages: {e}")
         return []
 
-
-
-def get_archived_chats():
+def get_sms_messages():
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT * FROM archived_conversations
-                ORDER BY archive_date DESC
+                SELECT 
+                    phone_number,
+                    MAX(timestamp) as last_message_time,
+                    COUNT(*) as message_count
+                FROM sms_messages
+                WHERE NOT is_archived
+                GROUP BY phone_number
+                ORDER BY last_message_time DESC
             """)
             return [dict(row) for row in cursor.fetchall()]
     except Exception as e:
-        logging.error(f"Error fetching archived chats: {e}")
+        logging.error(f"Error fetching SMS messages: {e}")
+        return []
+
+def get_call_logs():
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    caller_id,
+                    receiver_id,
+                    start_time,
+                    duration,
+                    call_type
+                FROM call_logs
+                WHERE NOT is_archived
+                ORDER BY start_time DESC
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        logging.error(f"Error fetching call logs: {e}")
+        return []
+
+def get_archived_items():
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    ai.id,
+                    ai.item_type,
+                    ai.archive_date,
+                    CASE 
+                        WHEN ai.item_type = 'chat' THEN cm.content
+                        WHEN ai.item_type = 'sms' THEN sm.content
+                        WHEN ai.item_type = 'call' THEN cl.duration || ' seconds'
+                    END as content
+                FROM archived_items ai
+                LEFT JOIN chat_messages cm ON ai.item_type = 'chat' AND ai.item_id = cm.id
+                LEFT JOIN sms_messages sm ON ai.item_type = 'sms' AND ai.item_id = sm.id
+                LEFT JOIN call_logs cl ON ai.item_type = 'call' AND ai.item_id = cl.id
+                ORDER BY ai.archive_date DESC
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        logging.error(f"Error fetching archived items: {e}")
         return []
