@@ -1,30 +1,37 @@
 
 from db import db
 
-class Contact(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    avatar = db.Column(db.String(200), nullable=True)
-    last_message = db.Column(db.String(200), nullable=True)
-    unread = db.Column(db.Boolean, default=False)
-
 class ChatMessage(db.Model):
-    __tablename__ = 'chat_message'
+    __tablename__ = 'chat_messages'
     id = db.Column(db.Integer, primary_key=True)
-    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
-    text = db.Column(db.String(500), nullable=False)
-    time = db.Column(db.String(100), nullable=False)
-    sender = db.Column(db.String(10), nullable=False)  # 'user' or 'contact'
+    conversation_id = db.Column(db.Integer, nullable=False)
+    sender_id = db.Column(db.Integer, nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False)
+    is_archived = db.Column(db.Boolean, default=False)
 
-class Call(db.Model):
+class SMSMessage(db.Model):
+    __tablename__ = 'sms_messages'
     id = db.Column(db.Integer, primary_key=True)
-    contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
-    time = db.Column(db.String(100), nullable=False)
+    phone_number = db.Column(db.String, nullable=False)
+    sender_id = db.Column(db.Integer, nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False)
+    is_archived = db.Column(db.Boolean, default=False)
 
-class Request(db.Model):
+class CallLog(db.Model):
+    __tablename__ = 'call_logs'
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    avatar = db.Column(db.String(200), nullable=True)
-    message = db.Column(db.String(500), nullable=False)
-    time = db.Column(db.String(100), nullable=False)
-    filter = db.Column(db.String(50), nullable=True)
+    caller_id = db.Column(db.Integer, nullable=False)
+    receiver_id = db.Column(db.Integer, nullable=False)
+    duration = db.Column(db.Integer, nullable=False)  # Duration in seconds
+    start_time = db.Column(db.DateTime, nullable=False)
+    call_type = db.Column(db.String, nullable=False)  # 'audio' or 'video'
+    is_archived = db.Column(db.Boolean, default=False)
+
+class ArchivedItem(db.Model):
+    __tablename__ = 'archived_items'
+    id = db.Column(db.Integer, primary_key=True)
+    item_type = db.Column(db.String, nullable=False)  # 'chat', 'sms', or 'call'
+    item_id = db.Column(db.Integer, nullable=False)
+    archive_date = db.Column(db.DateTime, nullable=False)
