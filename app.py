@@ -1,21 +1,18 @@
-import os
 from flask import Flask, render_template, jsonify, request
+import os
+from flask_sqlalchemy import SQLAlchemy
 from db import db
+from models import Contact, ChatMessage, Call, Request
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY") or "message_viewer_secret"
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///instance/data.db"
-app.config["SQLALCHEMY_ECHO"] = True  # Enable SQL query logging for debugging
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///messages.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
-
-# Import models after initializing db to avoid circular imports
-from models import Contact, ChatMessage, Call, Request
 
 @app.route('/')
 def index():
@@ -24,44 +21,22 @@ def index():
 @app.route('/api/chats')
 def get_chats():
     try:
-        # Get all contacts with their latest messages
-        contacts = Contact.query.all()
-        chats_data = []
-        for contact in contacts:
-            latest_message = ChatMessage.query.filter_by(contact_id=contact.id).order_by(ChatMessage.time.desc()).first()
-            chats_data.append({
-                'conversation_id': contact.id,
-                'name': contact.name,
-                'avatar': contact.avatar or url_for('static', filename='icons/fallback-icon.png'),
-                'last_message': latest_message.text if latest_message else None,
-                'last_message_time': latest_message.time if latest_message else None,
-                'unread': contact.unread
-            })
-        return jsonify(chats_data)
-    except Exception as e:
-        logging.error(f"Error fetching chats: {e}")
-        return jsonify({'error': 'Failed to fetch chats'}), 500
-
-@app.route('/api/requests')
-def get_requests():
-    try:
-        requests = Request.query.all()
+        chats = db.session.execute(db.select(Contact)).scalars().all()
         return jsonify([{
-            'id': req.id,
-            'title': req.title,
-            'avatar': req.avatar or url_for('static', filename='icons/request-icon.png'),
-            'message': req.message,
-            'time': req.time,
-            'filter': req.filter
-        } for req in requests])
+            'conversation_id': chat.id,
+            'name': chat.name,
+            'avatar': chat.avatar or 'default.png',
+            'last_message': chat.last_message,
+            'unread': chat.unread
+        } for chat in chats])
     except Exception as e:
-        logging.error(f"Error fetching requests: {e}")
-        return jsonify({'error': 'Failed to fetch requests'}), 500
+        logger.error(f"Error fetching chats: {e}")
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/chat/<int:contact_id>/messages')
-def get_chat_messages(contact_id):
+@app.route('/api/messages/<int:contact_id>')
+def get_messages(contact_id):
     try:
-        messages = ChatMessage.query.filter_by(contact_id=contact_id).order_by(ChatMessage.time).all()
+        messages = ChatMessage.query.filter_by(contact_id=contact_id).order_by(ChatMessage.time.desc()).all()
         return jsonify([{
             'id': msg.id,
             'text': msg.text,
@@ -69,50 +44,92 @@ def get_chat_messages(contact_id):
             'sender': msg.sender
         } for msg in messages])
     except Exception as e:
-        logging.error(f"Error fetching messages: {e}")
-        return jsonify({'error': 'Failed to fetch messages'}), 500
+        logger.error(f"Error fetching messages: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/calls/<int:contact_id>')
+def get_calls(contact_id):
+    try:
+        calls = Call.query.filter_by(contact_id=contact_id).order_by(Call.time.desc()).all()
+        return jsonify([{
+            'id': call.id,
+            'time': call.time
+        } for call in calls])
+    except Exception as e:
+        logger.error(f"Error fetching calls: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/requests')
+def get_requests():
+    try:
+        filter_type = request.args.get('filter', 'all')
+        query = Request.query
+        if filter_type != 'all':
+            query = query.filter_by(filter=filter_type)
+        requests = query.order_by(Request.time.desc()).all()
+        return jsonify([{
+            'id': req.id,
+            'title': req.title,
+            'message': req.message,
+            'time': req.time,
+            'avatar': req.avatar,
+            'filter': req.filter
+        } for req in requests])
+    except Exception as e:
+        logger.error(f"Error fetching requests: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/statistics')
+def get_statistics():
+    try:
+        # Example statistics - you would replace this with actual database queries
+        stats = [
+            {"month": "Jan", "message_count": 150, "unique_senders": 45},
+            {"month": "Feb", "message_count": 180, "unique_senders": 50},
+            {"month": "Mar", "message_count": 210, "unique_senders": 55}
+        ]
+        return jsonify(stats)
+    except Exception as e:
+        logger.error(f"Error fetching statistics: {e}")
+        return jsonify({'error': str(e)}), 500
 
 def init_db():
-    """Initialize the database and create all tables"""
     with app.app_context():
-        # Drop all tables and recreate them
-        db.drop_all()
-        db.create_all()
-        
-        # Verify that tables were created
-        inspector = db.inspect(db.engine)
-        tables = inspector.get_table_names()
-        logging.info(f"Created tables: {tables}")
-        
-        # Add some sample data
         try:
-            # Add a sample contact
-            sample_contact = Contact(
-                name="Sample User",
-                avatar="/static/icons/fallback-icon.png",
-                last_message="Welcome to the chat!",
-                unread=False
-            )
-            db.session.add(sample_contact)
-            db.session.commit()
-            logging.info("Added sample contact data")
+            db.create_all()
             
-            # Add a sample message
-            sample_message = ChatMessage(
-                contact_id=1,
-                text="Hello! This is a sample message.",
-                time="2024-12-07 12:00:00",
-                sender="contact"
-            )
-            db.session.add(sample_message)
-            db.session.commit()
-            logging.info("Added sample message data")
+            # Add sample data if database is empty
+            if not Contact.query.first():
+                # Sample contacts
+                contacts = [
+                    Contact(name='Alice Smith', avatar='avatar1.png', last_message='Hey, how are you?', unread=True),
+                    Contact(name='Bob Johnson', avatar='avatar2.png', last_message='Meeting at 3pm', unread=False),
+                    Contact(name='Carol Williams', avatar='avatar3.png', last_message='Thanks!', unread=True)
+                ]
+                db.session.add_all(contacts)
+                # Commit contacts first
+                db.session.commit()
+                
+                # Now add messages for each contact
+                for contact in Contact.query.all():
+                    messages = [
+                        ChatMessage(contact_id=contact.id, text='Hello!', time='2023-12-01 10:00', sender='contact'),
+                        ChatMessage(contact_id=contact.id, text='Hi there!', time='2023-12-01 10:05', sender='user'),
+                        ChatMessage(contact_id=contact.id, text='How are you?', time='2023-12-01 10:10', sender='contact')
+                    ]
+                    db.session.add_all(messages)
+                
+                # Commit messages
+                db.session.commit()
+                logger.info("Sample data added successfully")
             
+            logger.info("Database initialized successfully")
         except Exception as e:
-            db.session.rollback()
-            logging.error(f"Error adding sample data: {e}")
+            logger.error(f"Error initializing database: {e}")
             raise
 
+# Initialize database tables and sample data
+init_db()
+
 if __name__ == '__main__':
-    init_db()  # Initialize database and create sample data
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Interface</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <ul>
+            <li data-section="chats">
+                <img src="icons/chat-icon.png" alt="Chats" title="Chats">
+            </li>
+            <li data-section="requests">
+                <img src="icons/requests-icon.png" alt="Requests" title="Requests">
+            </li>
+            <li data-section="archived">
+                <img src="icons/archived-icon.png" alt="Archived Chats" title="Archived Chats">
+            </li>
+            <li data-section="groups">
+                <img src="icons/groups-icon.png" alt="Groups" title="Groups">
+            </li>
+            <li data-section="settings">
+                <img src="icons/settings-icon.png" alt="Settings" title="Settings">
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Chats Section -->
+        <div id="chats" class="section active">
+            <h1>Chats</h1>
+            <input type="text" id="search" placeholder="Search Messenger">
+            <ul class="chat-list">
+                <!-- Chat items will be dynamically populated -->
+            </ul>
+        </div>
+
+        <!-- Requests Section -->
+        <div id="requests" class="section">
+            <h1>Requests</h1>
+            <ul class="request-list">
+                <!-- Request items will be dynamically populated -->
+            </ul>
+        </div>
+
+        <!-- Archived Chats Section -->
+        <div id="archived" class="section">
+            <h1>Archived Chats</h1>
+            <ul class="archived-list">
+                <!-- Archived chat items will be dynamically populated -->
+            </ul>
+        </div>
+
+        <!-- Groups Section -->
+        <div id="groups" class="section">
+            <h1>Groups</h1>
+            <ul class="group-list">
+                <!-- Group items will be dynamically populated -->
+            </ul>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="section">
+            <h1>Settings</h1>
+            <div id="settings-content">
+                <!-- Settings details will be dynamically populated -->
+            </div>
+        </div>
+
+        <!-- Chat Window -->
+        <div class="chat-window">
+            <!-- Chat messages and header will be dynamically populated -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

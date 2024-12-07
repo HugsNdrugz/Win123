@@ -9,6 +9,7 @@ class Contact(db.Model):
     unread = db.Column(db.Boolean, default=False)
 
 class ChatMessage(db.Model):
+    __tablename__ = 'chat_message'
     id = db.Column(db.Integer, primary_key=True)
     contact_id = db.Column(db.Integer, db.ForeignKey('contact.id'), nullable=False)
     text = db.Column(db.String(500), nullable=False)
