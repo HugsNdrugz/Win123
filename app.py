@@ -10,9 +10,25 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///messages.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+def inspect_db_schema():
+    try:
+        with app.app_context():
+            # Get all table names
+            tables = db.session.execute(db.text("SELECT name FROM sqlite_master WHERE type='table';")).fetchall()
+            logger.info("Database Tables:")
+            for table in tables:
+                table_name = table[0]
+                # Get table schema
+                schema = db.session.execute(db.text(f"PRAGMA table_info({table_name});")).fetchall()
+                logger.info(f"\nTable: {table_name}")
+                for col in schema:
+                    logger.info(f"Column: {col}")
+    except Exception as e:
+        logger.error(f"Error inspecting database schema: {e}")
+
 
 @app.route('/')
 def index():
@@ -130,6 +146,8 @@ def init_db():
 
 # Initialize database tables and sample data
 init_db()
+# Initialize database and inspect schema
+inspect_db_schema()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

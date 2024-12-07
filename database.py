@@ -3,7 +3,7 @@ from contextlib import contextmanager
 import logging
 import os
 
-DATABASE_PATH = "messages.db"
+DATABASE_PATH = "data.db"
 
 def init_db():
     """Initialize the database with schema"""
