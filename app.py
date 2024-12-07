@@ -43,33 +43,42 @@ def get_chats():
         query = """
             WITH LatestMessages AS (
                 SELECT 
-                    sms_type as sender_name,
+                    CASE
+                        WHEN sms_type IS NOT NULL THEN sms_type
+                        ELSE sender
+                    END as sender_name,
                     text,
-                    time,
-                    ROW_NUMBER() OVER (PARTITION BY sms_type ORDER BY time DESC) as rn
-                FROM SMS
-                UNION ALL
-                SELECT 
-                    sender as sender_name,
-                    text,
-                    time,
-                    ROW_NUMBER() OVER (PARTITION BY sender ORDER BY time DESC) as rn
-                FROM ChatMessages
+                    CASE
+                        WHEN time LIKE '%+%' THEN strftime('%s', substr(time, 1, instr(time, '+') - 1))
+                        ELSE time
+                    END as timestamp,
+                    ROW_NUMBER() OVER (PARTITION BY CASE WHEN sms_type IS NOT NULL THEN sms_type ELSE sender END ORDER BY time DESC) as rn
+                FROM (
+                    SELECT sms_type, text, time, NULL as sender FROM SMS
+                    UNION ALL
+                    SELECT NULL as sms_type, text, time, sender FROM ChatMessages
+                )
             )
             SELECT 
                 sender_name as name,
                 text as last_message,
-                time,
+                datetime(timestamp, 'unixepoch') as time,
                 'avatar.png' as avatar,
                 1 as unread
             FROM LatestMessages
             WHERE rn = 1
-            ORDER BY time DESC
+            ORDER BY timestamp DESC
         """
         
         cursor.execute(query)
-        chats = [dict(row) for row in cursor.fetchall()]
-        
+        chats = []
+        for row in cursor.fetchall():
+            chat_dict = {}
+            for idx, col in enumerate(cursor.description):
+                chat_dict[col[0]] = row[idx]
+            chats.append(chat_dict)
+            
+        logger.debug(f"Retrieved chats: {chats}")
         return jsonify(chats)
     except Exception as e:
         logger.error(f"Error fetching chats: {e}")

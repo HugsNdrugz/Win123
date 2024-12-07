@@ -2,17 +2,26 @@
 {% extends "layout.html" %}
 {% block content %}
     <div class="chat-container">
-        <!-- Chat List -->
-        <div class="chat-list"></div>
+        <!-- Chat List Section -->
+        <div class="chat-list-section">
+            <h2>Messages</h2>
+            <div class="chat-list">
+                <!-- Chat items will be inserted here by JavaScript -->
+            </div>
+        </div>
         
-        <!-- Chat View -->
+        <!-- Chat View Section -->
         <div class="chat-view hidden">
             <div class="chat-header">
-                <button class="back-button">&larr;</button>
-                <img class="chat-contact-avatar" src="/static/images/avatar.png" alt="Contact Avatar">
-                <span class="chat-contact-name"></span>
+                <button class="back-button">&larr; Back</button>
+                <div class="contact-info">
+                    <img class="chat-contact-avatar" src="/static/images/avatar.png" alt="Contact Avatar">
+                    <span class="chat-contact-name"></span>
+                </div>
             </div>
-            <div class="messages-container"></div>
+            <div class="messages-container">
+                <!-- Messages will be inserted here by JavaScript -->
+            </div>
         </div>
     </div>
 {% endblock %}
