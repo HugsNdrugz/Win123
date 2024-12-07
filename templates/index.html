@@ -6,7 +6,7 @@
     <title>Messenger Interface - Data Visualization</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://unpkg.com/feather-icons"></script>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
 </head>
 <body>
     <div class="sidebar">
@@ -15,9 +15,7 @@
             <li data-section="chats" class="active">
                 <i data-feather="message-square"></i>
             </li>
-            <li data-section="statistics">
-                <i data-feather="bar-chart-2"></i>
-            </li>
+            
             <li data-section="requests">
                 <i data-feather="user-plus"></i>
             </li>
@@ -44,15 +42,7 @@
             <div class="chat-list"></div>
         </div>
 
-        <div id="statistics" class="section hidden">
-            <div class="top-bar">
-                <h1>Chat Statistics</h1>
-            </div>
-            <div class="stats-container">
-                <div id="monthly-messages-chart" class="chart"></div>
-                <div id="active-users-chart" class="chart"></div>
-            </div>
-        </div>
+        
 
         <div id="requests" class="section hidden">
             <div class="top-bar">
@@ -79,7 +69,7 @@
         </div>
     </div>
     
-    <script src="{{ url_for('static', filename='visualizations.js') }}"></script>
+    
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

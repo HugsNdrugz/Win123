@@ -44,23 +44,7 @@ def get_chat_data():
         logging.error(f"Error fetching chat data: {e}")
         return []
 
-def get_chat_statistics():
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT 
-                    strftime('%Y-%m', timestamp) as month,
-                    COUNT(*) as message_count,
-                    COUNT(DISTINCT sender_id) as unique_senders
-                FROM messages
-                GROUP BY month
-                ORDER BY month
-            """)
-            return [dict(row) for row in cursor.fetchall()]
-    except Exception as e:
-        logging.error(f"Error fetching statistics: {e}")
-        return []
+
 
 def get_archived_chats():
     try:

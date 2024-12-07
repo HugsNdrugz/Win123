@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial data load
     loadChats();
-    loadStatistics();
     
     // Search functionality
     const searchInput = document.getElementById('search');

@@ -1,6 +1,6 @@
 import os
 from flask import Flask, render_template, jsonify
-from database import get_chat_data, get_chat_statistics, get_archived_chats, init_db
+from database import get_chat_data, get_archived_chats, init_db
 import logging
 
 # Configure logging
@@ -22,11 +22,7 @@ def get_chats():
     logging.debug(f"Retrieved chat data: {chats}")
     return jsonify(chats)
 
-@app.route('/api/statistics')
-def get_statistics():
-    stats = get_chat_statistics()
-    logging.debug(f"Retrieved statistics: {stats}")
-    return jsonify(stats)
+
 
 @app.route('/api/archived')
 def get_archived():
