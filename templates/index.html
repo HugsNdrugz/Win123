@@ -32,14 +32,28 @@
 
     <div class="main-content">
         <div id="chats" class="section active">
-            <div class="top-bar">
-                <h1>Chats</h1>
-                <div class="right-icons">
-                    <i data-feather="edit"></i>
+            <div class="conversations-view">
+                <div class="top-bar">
+                    <h1>Chats</h1>
+                    <div class="right-icons">
+                        <i data-feather="edit"></i>
+                    </div>
                 </div>
+                <input type="text" id="search" placeholder="Search Messenger">
+                <div class="chat-list"></div>
             </div>
-            <input type="text" id="search" placeholder="Search Messenger">
-            <div class="chat-list"></div>
+            <div class="chat-view hidden">
+                <div class="chat-header">
+                    <div class="back-button">
+                        <i data-feather="arrow-left"></i>
+                    </div>
+                    <div class="chat-contact-info">
+                        <img src="" alt="Contact" class="chat-contact-avatar">
+                        <span class="chat-contact-name"></span>
+                    </div>
+                </div>
+                <div class="messages-container"></div>
+            </div>
         </div>
 
         

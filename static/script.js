@@ -36,7 +36,9 @@ function displayChats(chats) {
     document.querySelectorAll('.chat-item').forEach(item => {
         item.addEventListener('click', () => {
             const conversationId = item.dataset.conversationId;
-            loadChatMessages(conversationId);
+            const name = item.querySelector('h3').textContent;
+            const avatar = item.querySelector('img').src;
+            loadChatMessages(conversationId, name, avatar);
             // Mark as read
             item.querySelector('.unread-badge')?.remove();
         });
@@ -71,25 +73,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-async function loadChatMessages(conversationId) {
+async function loadChatMessages(conversationId, contactName, avatar) {
     try {
+        const chatView = document.querySelector('.chat-view');
+        const contactAvatar = chatView.querySelector('.chat-contact-avatar');
+        const contactName = chatView.querySelector('.chat-contact-name');
+        
+        // Update contact info
+        contactAvatar.src = avatar;
+        contactName.textContent = name;
+        
+        // Show chat view
+        chatView.classList.remove('hidden');
+        chatView.classList.add('active');
+        
         const response = await fetch(`/api/messages/${conversationId}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const messages = await response.json();
-        displayMessages(messages, conversationId);
+        displayMessages(messages);
     } catch (error) {
         console.error('Error loading messages:', error);
     }
 }
 
-function displayMessages(messages, conversationId) {
-    const chatSection = document.getElementById('chats');
-    const messageContainer = document.createElement('div');
-    messageContainer.className = 'message-container';
-    
-    messageContainer.innerHTML = messages.map(message => `
+function displayMessages(messages) {
+    const messagesContainer = document.querySelector('.messages-container');
+    messagesContainer.innerHTML = messages.map(message => `
         <div class="message ${message.sender === 'user' ? 'sent' : 'received'}">
             <div class="message-content">
                 <p>${message.text}</p>
@@ -98,14 +109,16 @@ function displayMessages(messages, conversationId) {
         </div>
     `).join('');
     
-    // Clear previous messages if any
-    const existingContainer = chatSection.querySelector('.message-container');
-    if (existingContainer) {
-        existingContainer.remove();
-    }
-    
-    chatSection.appendChild(messageContainer);
+    // Scroll to bottom
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
+
+// Add back button functionality
+document.querySelector('.back-button').addEventListener('click', () => {
+    const chatView = document.querySelector('.chat-view');
+    chatView.classList.remove('active');
+    setTimeout(() => chatView.classList.add('hidden'), 300);
+});
 
 function debounce(func, wait) {
     let timeout;
