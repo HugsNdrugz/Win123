@@ -58,16 +58,26 @@ async function loadChats() {
 function displayChats(chats) {
     const chatList = document.querySelector('.chat-list');
     chatList.innerHTML = chats.map(chat => `
-        <div class="chat-item">
+        <div class="chat-item" data-conversation-id="${chat.conversation_id}">
             <div class="chat-avatar">
-                <img src="https://via.placeholder.com/40" alt="Chat Avatar">
+                <img src="${chat.avatar}" alt="Chat Avatar">
             </div>
             <div class="chat-info">
-                <h3>Conversation ${chat.conversation_id}</h3>
-                <p>${chat.message_count} messages</p>
+                <h3>${chat.name}</h3>
+                <p>${chat.last_message || 'No messages yet'}</p>
+                <span class="chat-time">${chat.last_message_time || ''}</span>
+                ${chat.unread ? '<span class="unread-badge"></span>' : ''}
             </div>
         </div>
     `).join('');
+
+    // Add click handlers for chat items
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const conversationId = item.dataset.conversationId;
+            loadChatMessages(conversationId);
+        });
+    });
 }
 
 function debounce(func, wait) {

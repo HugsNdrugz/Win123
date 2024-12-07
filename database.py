@@ -19,10 +19,15 @@ def init_db():
 
 @contextmanager
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
     try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row
+        # Enable foreign key support
+        conn.execute("PRAGMA foreign_keys = ON")
         yield conn
+    except Exception as e:
+        logging.error(f"Database connection error: {e}")
+        raise
     finally:
         conn.close()
 
