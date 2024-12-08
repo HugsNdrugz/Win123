@@ -37,25 +37,64 @@ def query_db(query, args=(), one=False):
 def index():
     return render_template('index.html')
 
-@app.route('/api/chat_messages')
-def get_chat_messages():
-    """Get all chat messages grouped by sender"""
+@app.route('/api/contacts')
+def get_contacts():
+    """Get all contacts with their latest messages"""
+    try:
+        contacts = query_db("""
+            SELECT DISTINCT
+                sender as contact_name,
+                'Chat' as type,
+                MAX(time) as last_time,
+                FIRST_VALUE(text) OVER (PARTITION BY sender ORDER BY time DESC) as last_message
+            FROM ChatMessages
+            GROUP BY sender
+            UNION ALL
+            SELECT DISTINCT
+                from_to as contact_name,
+                'SMS' as type,
+                MAX(time) as last_time,
+                FIRST_VALUE(text) OVER (PARTITION BY from_to ORDER BY time DESC) as last_message
+            FROM SMS
+            GROUP BY from_to
+            ORDER BY last_time DESC
+        """)
+        return jsonify({
+            'success': True,
+            'data': [dict(row) for row in contacts]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching contacts: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/messages/<contact>')
+def get_contact_messages(contact):
+    """Get all messages for a specific contact"""
     try:
         messages = query_db("""
             SELECT 
-                sender,
-                text as last_message,
+                'Chat' as type,
                 time,
-                messenger as platform
+                text,
+                sender as from_to
             FROM ChatMessages 
+            WHERE sender = ?
+            UNION ALL
+            SELECT 
+                'SMS' as type,
+                time,
+                text,
+                from_to
+            FROM SMS
+            WHERE from_to = ?
             ORDER BY time DESC
-        """)
+        """, [contact, contact])
         return jsonify({
             'success': True,
             'data': [dict(row) for row in messages]
         })
     except Exception as e:
-        logger.error(f"Error fetching chat messages: {e}")
+        logger.error(f"Error fetching contact messages: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/sms')

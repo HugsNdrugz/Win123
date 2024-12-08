@@ -36,18 +36,87 @@ async function loadContent(tabName) {
     }
 }
 
-function formatContent(type, data) {
-    switch (type) {
-        case 'chat':
-            return formatChatMessages(data);
-        case 'sms':
-            return formatSMS(data);
-        case 'calls':
-            return formatCalls(data);
-        case 'apps':
-            return formatApps(data);
-        default:
-            return '<p>Invalid content type</p>';
+async function loadContent(tabName) {
+    // Update active state
+    document.querySelectorAll('.nav-button').forEach(btn => 
+        btn.classList.toggle('active', btn.dataset.tab === tabName)
+    );
+
+    const contentDiv = document.getElementById('content');
+    
+    if (tabName === 'chat' || tabName === 'sms') {
+        try {
+            const response = await fetch('/api/contacts');
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to load contacts');
+            }
+            
+            contentDiv.innerHTML = `
+                <div class="contacts-list">
+                    ${result.data.map(contact => `
+                        <div class="contact-item" data-contact="${contact.contact_name}">
+                            <div class="contact-header">
+                                <span class="contact-name">${contact.contact_name}</span>
+                                <span class="contact-time">${formatDate(contact.last_time)}</span>
+                            </div>
+                            <div class="contact-preview">${contact.last_message}</div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="messages-view">
+                    <div class="no-contact-selected">
+                        Select a contact to view messages
+                    </div>
+                </div>
+            `;
+
+            // Add click handlers for contacts
+            document.querySelectorAll('.contact-item').forEach(item => {
+                item.addEventListener('click', () => loadMessages(item.dataset.contact));
+            });
+        } catch (error) {
+            console.error(`Error loading ${tabName}:`, error);
+            showError(`Failed to load ${tabName}`);
+        }
+    } else {
+        contentDiv.innerHTML = `<div class="messages-view">Coming soon...</div>`;
+    }
+}
+
+async function loadMessages(contact) {
+    const messagesView = document.querySelector('.messages-view');
+    
+    // Update active contact
+    document.querySelectorAll('.contact-item').forEach(item => 
+        item.classList.toggle('active', item.dataset.contact === contact)
+    );
+    
+    try {
+        const response = await fetch(`/api/messages/${encodeURIComponent(contact)}`);
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to load messages');
+        }
+        
+        messagesView.innerHTML = `
+            <div class="messages-container">
+                ${result.data.map(msg => `
+                    <div class="message-item ${msg.type.toLowerCase()}">
+                        <div class="message-header">
+                            <strong>${msg.from_to}</strong>
+                            <small>${formatDate(msg.time)}</small>
+                        </div>
+                        <div class="message-content">${msg.text}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error loading messages:', error);
+        messagesView.innerHTML = `<div class="error-message">Failed to load messages</div>`;
     }
 }
 
