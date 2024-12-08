@@ -3,32 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Visualization Tool</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Message Viewer</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@material/web@1.0.0/dist/material-web.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <div class="app-container">
-        <nav class="sidebar">
-            <button class="nav-button active" data-tab="chat" title="Chat Messages">
-                <i class="fas fa-comments"></i>
-            </button>
-            <button class="nav-button" data-tab="sms" title="SMS">
-                <i class="fas fa-sms"></i>
-            </button>
-            <button class="nav-button" data-tab="calls" title="Calls">
-                <i class="fas fa-phone"></i>
-            </button>
-            <button class="nav-button" data-tab="apps" title="Applications">
-                <i class="fas fa-th"></i>
-            </button>
+        <nav class="navigation-rail">
+            <div class="nav-content">
+                <md-navigation-bar>
+                    <md-navigation-tab icon="chat" label="Messages" data-tab="chat" selected></md-navigation-tab>
+                    <md-navigation-tab icon="sms" label="SMS" data-tab="sms"></md-navigation-tab>
+                    <md-navigation-tab icon="phone" label="Calls" data-tab="calls"></md-navigation-tab>
+                    <md-navigation-tab icon="apps" label="Apps" data-tab="apps"></md-navigation-tab>
+                </md-navigation-bar>
+            </div>
         </nav>
+        
         <main class="content-area">
-            <div id="content">
-                <!-- Dynamic content will be loaded here -->
+            <div id="content" class="content-container">
+                <div class="conversations-view active">
+                    <div class="contact-list">
+                        <!-- Contact cards will be loaded here -->
+                    </div>
+                    <div class="messages-panel">
+                        <div class="no-conversation-selected">
+                            <span class="material-icons">chat</span>
+                            <p>Select a conversation to start</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
+    
+    <script type="module">
+        import '@material/web/navigationbar/navigation-bar.js';
+        import '@material/web/navigationbar/navigation-tab.js';
+        import '@material/web/icon/icon.js';
+    </script>
     <script src="/static/js/main.js"></script>
 </body>
 </html>

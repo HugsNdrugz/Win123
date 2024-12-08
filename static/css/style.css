@@ -1,260 +1,182 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* Material Design 3 Theme Colors */
+:root {
+    --md-sys-color-primary: #006a6a;
+    --md-sys-color-surface: #fcfcfc;
+    --md-sys-color-surface-container: #f3f3f3;
+    --md-sys-color-on-surface: #191c1c;
+    --md-sys-color-outline: #6f7979;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    background: #f5f5f5;
-    height: 100vh;
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
 }
 
 .app-container {
     display: flex;
     height: 100vh;
-    background: white;
+    overflow: hidden;
+}
+
+.navigation-rail {
+    width: 80px;
+    background: var(--md-sys-color-surface-container);
+    border-right: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.navigation-rail md-navigation-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .content-area {
     flex: 1;
     display: flex;
-    background: #ffffff;
-    transition: all 0.3s ease;
+    overflow: hidden;
 }
 
-.content-area.with-messages .contacts-list {
-    display: none;
-}
-
-.content-area.with-messages .messages-view {
-    width: 100%;
-}
-
-.messages-header {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid #e1e4e8;
-    background: #f8f9fa;
-    position: sticky;
-    top: 0;
-}
-
-.messages-header h2 {
-    margin: 0 0 0 15px;
-    font-size: 18px;
-}
-
-.back-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 4px;
-    color: #586069;
-}
-
-.back-button:hover {
-    background: #e1e4e8;
-    color: #24292e;
-}
-
-.loading {
-    text-align: center;
-    padding: 20px;
-    color: #586069;
-}
-
-.contacts-list {
-    width: 300px;
-    border-right: 1px solid #e1e4e8;
-    overflow-y: auto;
-    background: #f8f9fa;
-}
-
-.messages-view {
+.content-container {
     flex: 1;
-    padding: 20px;
+    display: flex;
+    overflow: hidden;
+}
+
+.conversations-view {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.contact-list {
+    width: 360px;
+    border-right: 1px solid rgba(0, 0, 0, 0.12);
     overflow-y: auto;
-    background: #ffffff;
+    background: var(--md-sys-color-surface);
 }
 
-.contact-item {
-    padding: 15px;
-    border-bottom: 1px solid #e1e4e8;
+.contact-card {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    transition: background-color 0.2s ease;
 }
 
-.contact-item:hover {
-    background-color: #f1f2f3;
+.contact-card:hover {
+    background-color: var(--md-sys-color-surface-container);
 }
 
-.contact-item.active {
-    background-color: #e1e4e8;
+.contact-card.selected {
+    background-color: var(--md-sys-color-surface-container);
 }
 
 .contact-header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 5px;
+    align-items: center;
 }
 
 .contact-name {
-    font-weight: 600;
-    color: #24292e;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
 }
 
 .contact-time {
     font-size: 12px;
-    color: #586069;
+    color: var(--md-sys-color-outline);
 }
 
 .contact-preview {
-    font-size: 13px;
-    color: #586069;
+    font-size: 14px;
+    color: var(--md-sys-color-outline);
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.messages-container,
-.calls-container,
-.apps-container {
-    max-width: 800px;
-    margin: 0 auto;
+.messages-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--md-sys-color-surface);
 }
 
-.section-title {
-    font-size: 24px;
-    font-weight: 500;
-    margin-bottom: 20px;
-    color: #24292e;
-}
-.sidebar {
-    width: 70px;
-    background: #f8f9fa;
-    border-right: 1px solid #e1e4e8;
+.no-conversation-selected {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px 0;
-}
-
-.nav-button {
-    width: 48px;
-    height: 48px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    color: #586069;
-    transition: all 0.2s ease;
+    color: var(--md-sys-color-outline);
 }
 
-.nav-button:hover {
-    background: #e1e4e8;
-    color: #24292e;
+.no-conversation-selected .material-icons {
+    font-size: 48px;
+    margin-bottom: 16px;
 }
 
-.nav-button.active {
-    background: #0366d6;
+.messages-container {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.message-bubble {
+    max-width: 70%;
+    margin: 8px 0;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: var(--md-sys-color-surface-container);
+}
+
+.message-bubble.outgoing {
+    margin-left: auto;
+    background: var(--md-sys-color-primary);
     color: white;
 }
 
-.nav-button i {
-    font-size: 24px;
-}
-
-#content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-}
-
-.messages-container,
-.calls-container,
-.apps-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.message-item,
-.call-item,
-.app-item {
-    padding: 15px;
-    border: 1px solid #e1e4e8;
-    border-radius: 6px;
-    background: white;
-    transition: box-shadow 0.2s ease;
-}
-
-.message-item:hover,
-.call-item:hover,
-.app-item:hover {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.message-header,
-.call-header,
-.app-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.message-content,
-.call-details,
-.app-details {
-    color: #24292e;
-    margin: 8px 0;
-}
-
-.message-platform,
-.message-location,
-.call-location {
+.message-time {
     font-size: 12px;
-    color: #586069;
+    color: var(--md-sys-color-outline);
+    margin-top: 4px;
 }
 
-.call-item.missed {
-    border-left: 3px solid #d73a49;
-}
-
-.call-item.received {
-    border-left: 3px solid #28a745;
-}
-
-.error-message {
-    padding: 15px;
-    background: #ffdce0;
-    color: #86181d;
-    border-radius: 6px;
-    margin: 20px;
-    text-align: center;
-}
-
+/* Responsive Design */
 @media (max-width: 768px) {
-    .tab-nav {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+    .navigation-rail {
+        width: 64px;
     }
     
-    .tab-button {
-        padding: 12px 15px;
-        font-size: 13px;
+    .contact-list {
+        width: 280px;
+    }
+}
+
+@media (max-width: 480px) {
+    .contact-list {
+        width: 100%;
     }
     
-    #content {
-        padding: 10px;
+    .messages-panel {
+        display: none;
+    }
+    
+    .conversations-view.showing-messages .contact-list {
+        display: none;
+    }
+    
+    .conversations-view.showing-messages .messages-panel {
+        display: flex;
     }
 }
