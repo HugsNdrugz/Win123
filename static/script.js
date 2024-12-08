@@ -75,6 +75,8 @@ async function loadChatMessages(sender, contactName) {
         const chatListSection = document.querySelector('.chat-list-section');
         const contactNameElement = chatView.querySelector('.chat-contact-name');
         
+        console.log('Loading messages for:', sender);
+        
         // Update contact info
         contactNameElement.textContent = contactName;
         
@@ -87,10 +89,17 @@ async function loadChatMessages(sender, contactName) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const messages = await response.json();
+        console.log('Received messages:', messages);
+        
+        if (!Array.isArray(messages)) {
+            throw new TypeError('Expected messages to be an array');
+        }
+        
         displayMessages(messages);
     } catch (error) {
         console.error('Error loading messages:', error);
-        alert('Failed to load messages. Please try again.');
+        // Don't show alert, just log the error
+        chatView.innerHTML = '<p class="error-message">Failed to load messages. Please try again.</p>';
     }
 }
 
