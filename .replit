@@ -4,7 +4,7 @@ modules = ["python-3.11"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Flask Server"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -18,6 +18,10 @@ args = "Flask App"
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Flask Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "DB Inspector"
 
 [[workflows.workflow]]
 name = "Flask App"
@@ -46,8 +50,22 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python app.py"
+args = "python run.py"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "DB Inspector"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python db_inspector.py"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
