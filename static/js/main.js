@@ -74,7 +74,7 @@ async function loadContent(tabName) {
 
             // Add click handlers for contacts
             document.querySelectorAll('.contact-item').forEach(item => {
-                item.addEventListener('click', () => loadMessages(item.dataset.contact));
+                item.addEventListener('click', () => loadMessages(item.dataset.contact, tabName));
             });
         } catch (error) {
             console.error(`Error loading ${tabName}:`, error);
@@ -85,8 +85,12 @@ async function loadContent(tabName) {
     }
 }
 
-async function loadMessages(contact) {
+async function loadMessages(contact, messageType) {
     const messagesView = document.querySelector('.messages-view');
+    const contentArea = document.querySelector('.content-area');
+    
+    // Clear previous messages and show loading state
+    messagesView.innerHTML = '<div class="loading">Loading messages...</div>';
     
     // Update active contact
     document.querySelectorAll('.contact-item').forEach(item => 
@@ -101,12 +105,20 @@ async function loadMessages(contact) {
             throw new Error(result.error || 'Failed to load messages');
         }
         
+        // Ensure content area is properly structured
+        contentArea.className = 'content-area with-messages';
+        
         messagesView.innerHTML = `
+            <div class="messages-header">
+                <button class="back-button">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2>${contact}</h2>
+            </div>
             <div class="messages-container">
                 ${result.data.map(msg => `
                     <div class="message-item ${msg.type.toLowerCase()}">
                         <div class="message-header">
-                            <strong>${msg.from_to}</strong>
                             <small>${formatDate(msg.time)}</small>
                         </div>
                         <div class="message-content">${msg.text}</div>
@@ -114,6 +126,13 @@ async function loadMessages(contact) {
                 `).join('')}
             </div>
         `;
+        
+        // Add back button handler
+        const backButton = messagesView.querySelector('.back-button');
+        backButton.addEventListener('click', () => {
+            contentArea.className = 'content-area';
+            loadContent(messageType); // Reload the contact list
+        });
     } catch (error) {
         console.error('Error loading messages:', error);
         messagesView.innerHTML = `<div class="error-message">Failed to load messages</div>`;
