@@ -92,24 +92,26 @@ def get_messages(sender):
         query = """
             SELECT 
                 'SMS' as type,
-                sms_type as sender,
+                COALESCE(sms_type, from_to) as sender,
                 text,
-                time
+                time,
+                location
             FROM SMS 
-            WHERE sms_type = ?
+            WHERE sms_type = ? OR from_to = ?
             UNION ALL
             SELECT 
                 'Chat' as type,
-                sender,
+                COALESCE(sender, messenger) as sender,
                 text,
-                time
+                time,
+                NULL as location
             FROM ChatMessages
-            WHERE sender = ?
+            WHERE sender = ? OR messenger = ?
             ORDER BY time ASC;
         """
         
         logger.debug(f"Executing query with params: {(sender, sender)}")
-        cursor.execute(query, (sender, sender))
+        cursor.execute(query, (sender, sender, sender, sender))
         
         raw_results = cursor.fetchall()
         logger.debug(f"Raw results from database: {[dict(row) for row in raw_results]}")
@@ -118,17 +120,23 @@ def get_messages(sender):
         for row in raw_results:
             logger.debug(f"Processing row: {dict(row)}")
             try:
+                # Ensure all required fields are present
+                if not all(key in row.keys() for key in ['type', 'sender', 'text', 'time']):
+                    logger.error(f"Missing required fields in row: {dict(row)}")
+                    continue
+                
                 message_dict = {
-                    'type': row['type'],
-                    'sender': row['sender'],
-                    'text': row['text'],
-                    'time': row['time'],
-                    'message_type': 'received' if row['type'] == 'SMS' else 'sent'
+                    'type': str(row['type']),
+                    'sender': str(row['sender']) if row['sender'] else 'Unknown',
+                    'text': str(row['text']) if row['text'] else '',
+                    'time': str(row['time']) if row['time'] else '',
+                    'location': str(row['location']) if row['location'] else None,
+                    'message_type': 'received' if str(row['type']).upper() == 'SMS' else 'sent'
                 }
                 messages.append(message_dict)
                 logger.debug(f"Successfully processed message: {message_dict}")
             except Exception as row_error:
-                logger.error(f"Error processing row {dict(row)}: {str(row_error)}")
+                logger.error(f"Error processing row {dict(row)}: {str(row_error)}", exc_info=True)
                 continue
             
         logger.info(f"Retrieved {len(messages)} messages for {sender}")
