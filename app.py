@@ -37,57 +37,90 @@ def query_db(query, args=(), one=False):
 def index():
     return render_template('index.html')
 
-@app.route('/api/conversations')
-def get_conversations():
-    """Get latest messages from both SMS and Chat, ordered by time"""
+@app.route('/api/chat_messages')
+def get_chat_messages():
+    """Get all chat messages grouped by sender"""
     try:
         messages = query_db("""
             SELECT 
-                'Chat' as type,
-                sender as name,
+                sender,
                 text as last_message,
                 time,
-                'avatar.png' as avatar
-            FROM ChatMessages
-            UNION ALL
-            SELECT 
-                'SMS' as type,
-                sms_type as name,
-                text as last_message,
-                time,
-                'avatar.png' as avatar
-            FROM SMS
+                messenger as platform
+            FROM ChatMessages 
             ORDER BY time DESC
         """)
-        
-        return jsonify([
-            {
-                'type': row['type'],
-                'name': row['name'],
-                'last_message': row['last_message'],
-                'time': row['time'],
-                'avatar': row['avatar']
-            } for row in messages
-        ])
+        return jsonify({
+            'success': True,
+            'data': [dict(row) for row in messages]
+        })
     except Exception as e:
-        logger.error(f"Error fetching conversations: {e}")
-        return jsonify([])
+        logger.error(f"Error fetching chat messages: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/messages/<conversation>')
-def get_messages(conversation):
-    """Get all messages for a specific conversation"""
+@app.route('/api/sms')
+def get_sms():
+    """Get all SMS messages"""
     try:
         messages = query_db("""
-            SELECT time, text, sender
-            FROM ChatMessages 
-            WHERE sender = ?
+            SELECT 
+                sms_type,
+                from_to,
+                text,
+                time,
+                location
+            FROM SMS 
             ORDER BY time DESC
-        """, [conversation])
-        
-        return jsonify([dict(row) for row in messages])
+        """)
+        return jsonify({
+            'success': True,
+            'data': [dict(row) for row in messages]
+        })
     except Exception as e:
-        logger.error(f"Error fetching messages: {e}")
-        return jsonify([])
+        logger.error(f"Error fetching SMS: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/calls')
+def get_calls():
+    """Get all call records"""
+    try:
+        calls = query_db("""
+            SELECT 
+                call_type,
+                from_to,
+                time,
+                duration,
+                location
+            FROM Calls 
+            ORDER BY time DESC
+        """)
+        return jsonify({
+            'success': True,
+            'data': [dict(row) for row in calls]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching calls: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/apps')
+def get_apps():
+    """Get all installed applications"""
+    try:
+        apps = query_db("""
+            SELECT 
+                application_name,
+                package_name,
+                install_date
+            FROM InstalledApps 
+            ORDER BY install_date DESC
+        """)
+        return jsonify({
+            'success': True,
+            'data': [dict(row) for row in apps]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching apps: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
