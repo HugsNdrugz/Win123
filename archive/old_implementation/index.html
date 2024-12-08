@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Visualization Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <h1>Messages & Calls</h1>
+            <div class="conversations">
+                <h2>Conversations</h2>
+                <!-- Conversations will be loaded here -->
+            </div>
+        </nav>
+        
+        <main class="main-content">
+            <div class="messages-container">
+                <!-- Messages will be loaded here -->
+            </div>
+            
+            <div class="calls-container" style="display: none;">
+                <h2>Call History</h2>
+                <div class="calls-list">
+                    <!-- Calls will be loaded here -->
+                </div>
+            </div>
+            
+            <div class="apps-container" style="display: none;">
+                <h2>Installed Applications</h2>
+                <div class="apps-list">
+                    <!-- Apps will be loaded here -->
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

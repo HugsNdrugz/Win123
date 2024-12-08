@@ -1,16 +1,19 @@
-import os
-from flask import Flask, render_template, jsonify
 import sqlite3
-from datetime import datetime
+from flask import Flask, render_template, jsonify, g
 import logging
+from datetime import datetime
 
+# Configure logging
 logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
+DATABASE = 'data.db'
 
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect('data.db')
+        db = g._database = sqlite3.connect(DATABASE)
         db.row_factory = sqlite3.Row
     return db
 
@@ -20,110 +23,71 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+def query_db(query, args=(), one=False):
+    try:
+        cur = get_db().execute(query, args)
+        rv = cur.fetchall()
+        cur.close()
+        return (rv[0] if rv else None) if one else rv
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        return None
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/api/conversations')
 def get_conversations():
+    """Get latest messages from both SMS and Chat, ordered by time"""
     try:
-        db = get_db()
-        cursor = db.cursor()
-        
-        # Combine SMS and Chat messages for conversations
-        cursor.execute("""
-            SELECT 'SMS' as type, sms_type as sender, time, text
-            FROM SMS 
-            UNION ALL
-            SELECT 'Chat' as type, sender, time, text
+        messages = query_db("""
+            SELECT 
+                'Chat' as type,
+                sender as name,
+                text as last_message,
+                time,
+                'avatar.png' as avatar
             FROM ChatMessages
+            UNION ALL
+            SELECT 
+                'SMS' as type,
+                sms_type as name,
+                text as last_message,
+                time,
+                'avatar.png' as avatar
+            FROM SMS
             ORDER BY time DESC
         """)
-        conversations = cursor.fetchall()
         
-        return jsonify([{
-            'type': row['type'],
-            'sender': row['sender'],
-            'text': row['text'],
-            'time': row['time'],
-            'avatar': 'static/images/avatar.png'
-        } for row in conversations])
+        return jsonify([
+            {
+                'type': row['type'],
+                'name': row['name'],
+                'last_message': row['last_message'],
+                'time': row['time'],
+                'avatar': row['avatar']
+            } for row in messages
+        ])
     except Exception as e:
-        logging.error(f"Error fetching conversations: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching conversations: {e}")
+        return jsonify([])
 
-@app.route('/api/messages/<sender>')
-def get_messages(sender):
+@app.route('/api/messages/<conversation>')
+def get_messages(conversation):
+    """Get all messages for a specific conversation"""
     try:
-        db = get_db()
-        cursor = db.cursor()
-        
-        # Get both SMS and Chat messages for the sender
-        cursor.execute("""
-            SELECT 'SMS' as type, time, text
-            FROM SMS 
-            WHERE sms_type = ?
-            UNION ALL
-            SELECT 'Chat' as type, time, text
-            FROM ChatMessages
+        messages = query_db("""
+            SELECT time, text, sender
+            FROM ChatMessages 
             WHERE sender = ?
-            ORDER BY time ASC
-        """, (sender, sender))
-        
-        messages = cursor.fetchall()
-        
-        return jsonify([{
-            'type': row['type'],
-            'text': row['text'],
-            'time': row['time']
-        } for row in messages])
-    except Exception as e:
-        logging.error(f"Error fetching messages: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/calls')
-def get_calls():
-    try:
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute("""
-            SELECT call_type, time, from_to, duration, location
-            FROM Calls
             ORDER BY time DESC
-        """)
-        calls = cursor.fetchall()
+        """, [conversation])
         
-        return jsonify([{
-            'type': row['call_type'],
-            'contact': row['from_to'],
-            'time': row['time'],
-            'duration': row['duration'],
-            'location': row['location']
-        } for row in calls])
+        return jsonify([dict(row) for row in messages])
     except Exception as e:
-        logging.error(f"Error fetching calls: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/apps')
-def get_apps():
-    try:
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute("""
-            SELECT application_name, package_name, install_date
-            FROM InstalledApps
-            ORDER BY install_date DESC
-        """)
-        apps = cursor.fetchall()
-        
-        return jsonify([{
-            'name': row['application_name'],
-            'package': row['package_name'],
-            'install_date': row['install_date']
-        } for row in apps])
-    except Exception as e:
-        logging.error(f"Error fetching apps: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching messages: {e}")
+        return jsonify([])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
