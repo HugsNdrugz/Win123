@@ -2,9 +2,15 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Application initialized');
     loadContent('chat'); // Load chat messages by default
     
-    // Set up tab switching
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', () => loadContent(button.dataset.tab));
+    // Set up navigation switching
+    document.querySelectorAll('.nav-button').forEach(button => {
+        button.addEventListener('click', () => {
+            // Update active state
+            document.querySelectorAll('.nav-button').forEach(btn => 
+                btn.classList.toggle('active', btn === button)
+            );
+            loadContent(button.dataset.tab);
+        });
     });
 });
 

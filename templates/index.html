@@ -4,19 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Visualization Tool</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <div class="app-container">
-        <nav class="tab-nav">
-            <button class="tab-button active" data-tab="chat">Chat Messages</button>
-            <button class="tab-button" data-tab="sms">SMS</button>
-            <button class="tab-button" data-tab="calls">Calls</button>
-            <button class="tab-button" data-tab="apps">Applications</button>
+        <nav class="sidebar">
+            <button class="nav-button active" data-tab="chat" title="Chat Messages">
+                <i class="fas fa-comments"></i>
+            </button>
+            <button class="nav-button" data-tab="sms" title="SMS">
+                <i class="fas fa-sms"></i>
+            </button>
+            <button class="nav-button" data-tab="calls" title="Calls">
+                <i class="fas fa-phone"></i>
+            </button>
+            <button class="nav-button" data-tab="apps" title="Applications">
+                <i class="fas fa-th"></i>
+            </button>
         </nav>
-        <div id="content">
-            <!-- Dynamic content will be loaded here -->
-        </div>
+        <main class="content-area">
+            <div id="content">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+        </main>
     </div>
     <script src="/static/js/main.js"></script>
 </body>
