@@ -28,17 +28,40 @@ def get_conversations():
         cursor = db.cursor()
         
         query = """
-            SELECT c.contact_id, c.name, m.text AS last_message, MAX(m.time) AS last_time
-            FROM Contacts c
-            LEFT JOIN (
-                SELECT sender_contact_id AS contact_id, text, time
+            SELECT 
+                'SMS' as type,
+                CASE 
+                    WHEN sms_type = 'Sent' THEN from_to
+                    ELSE sms_type 
+                END as sender,
+                text as last_message,
+                time,
+                'avatar.png' as avatar,
+                location
+            FROM SMS 
+            WHERE time IN (
+                SELECT MAX(time) 
+                FROM SMS 
+                GROUP BY CASE 
+                    WHEN sms_type = 'Sent' THEN from_to
+                    ELSE sms_type 
+                END
+            )
+            UNION ALL
+            SELECT 
+                'Chat' as type,
+                COALESCE(sender, messenger) as sender,
+                text as last_message,
+                time,
+                'avatar.png' as avatar,
+                NULL as location
+            FROM ChatMessages
+            WHERE time IN (
+                SELECT MAX(time)
                 FROM ChatMessages
-                UNION
-                SELECT sender_contact_id AS contact_id, text, time
-                FROM SMS
-            ) m ON c.contact_id = m.contact_id
-            GROUP BY c.contact_id
-            ORDER BY last_time DESC;
+                GROUP BY COALESCE(sender, messenger)
+            )
+            ORDER BY time DESC;
         """
         
         logger.debug("Executing chat list query")
@@ -71,21 +94,31 @@ def get_conversations():
         logger.error(f"Error fetching chats: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/messages/<int:contact_id>')
-def get_messages(contact_id):
+@app.route('/api/messages/<sender>')
+def get_messages(sender):
     try:
-        logger.debug(f"Fetching messages for contact_id: {contact_id}")
+        logger.debug(f"Fetching messages for sender: {sender}")
         db = get_db()
         cursor = db.cursor()
         
         query = """
-            SELECT text, time, sender_contact_id, recipient_contact_id
+            SELECT 
+                'SMS' as type,
+                COALESCE(sms_type, from_to) as sender,
+                text,
+                time,
+                location
+            FROM SMS 
+            WHERE sms_type = ? OR from_to = ?
+            UNION ALL
+            SELECT 
+                'Chat' as type,
+                COALESCE(messenger, sender) as sender,
+                text,
+                time,
+                NULL as location
             FROM ChatMessages
-            WHERE sender_contact_id = ? OR recipient_contact_id = ?
-            UNION
-            SELECT text, time, sender_contact_id, recipient_contact_id
-            FROM SMS
-            WHERE sender_contact_id = ? OR recipient_contact_id = ?
+            WHERE messenger = ? OR sender = ?
             ORDER BY time ASC;
         """
         

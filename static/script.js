@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    loadChats();
+    loadConversations();
     setupBackButton();
 });
 
@@ -23,57 +23,59 @@ async function loadConversations() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const conversations = await response.json();
-        if (!chats || chats.length === 0) {
-            console.warn("No chat data received");
+        if (!conversations || conversations.length === 0) {
+            console.warn("No conversations data received");
             return;
         }
-        console.log("Received chat data:", chats);
-        displayChats(chats);
+        console.log("Received conversations data:", conversations);
+        displayChats(conversations);
     } catch (error) {
-        console.error('Error loading chats:', error);
-        // Show error message to user
+        console.error('Error loading conversations:', error);
         const chatList = document.querySelector('.chat-list');
         if (chatList) {
-            chatList.innerHTML = '<div class="error-message">Unable to load chats. Please try again later.</div>';
+            chatList.innerHTML = '<div class="error-message">Unable to load conversations. Please try again later.</div>';
         }
     }
 }
 
-function displayChats(chats) {
+function displayChats(conversations) {
     const chatList = document.querySelector('.chat-list');
     if (!chatList) {
         console.error('Chat list container not found');
         return;
     }
     
-    chatList.innerHTML = chats.map(chat => `
-        <div class="chat-item" data-sender="${chat.name}">
-            <img src="/static/images/${chat.avatar}" 
-                 alt="${chat.name}'s avatar" 
-                 onerror="this.src='/static/images/avatar.png'">
+    chatList.innerHTML = conversations.map(chat => `
+        <div class="chat-item" data-sender="${chat.sender}">
+            <img src="/static/images/avatar.png" 
+                 alt="${chat.sender}'s avatar">
             <div class="chat-info">
-                <h3>${chat.name}</h3>
+                <h3>${chat.sender}</h3>
                 <p class="last-message">${chat.last_message || 'No messages'}</p>
+                <small>${new Date(chat.time).toLocaleString()}</small>
             </div>
-            ${chat.unread ? '<span class="unread-badge"></span>' : ''}
         </div>
     `).join('');
 
-    // Add click handlers for chat items
     document.querySelectorAll('.chat-item').forEach(item => {
         item.addEventListener('click', () => {
             const sender = item.dataset.sender;
-            const name = item.querySelector('h3').textContent;
-            loadChatMessages(sender, name);
+            loadChatMessages(sender, sender);
         });
     });
 }
 
 async function loadChatMessages(sender, contactName) {
+    if (!sender) {
+        console.error('No sender provided to loadChatMessages');
+        return;
+    }
+
     try {
         const chatView = document.querySelector('.chat-view');
         const chatListSection = document.querySelector('.chat-list-section');
         const contactNameElement = chatView.querySelector('.chat-contact-name');
+        const messagesContainer = document.querySelector('.messages-container');
         
         console.log('Loading messages for:', sender);
         
@@ -83,6 +85,9 @@ async function loadChatMessages(sender, contactName) {
         // Show chat view, hide chat list
         chatListSection.style.display = 'none';
         chatView.classList.remove('hidden');
+        
+        // Show loading state
+        messagesContainer.innerHTML = '<div class="loading">Loading messages...</div>';
         
         const response = await fetch(`/api/messages/${encodeURIComponent(sender)}`);
         if (!response.ok) {
@@ -95,11 +100,18 @@ async function loadChatMessages(sender, contactName) {
             throw new TypeError('Expected messages to be an array');
         }
         
+        if (messages.length === 0) {
+            messagesContainer.innerHTML = '<div class="no-messages">No messages found</div>';
+            return;
+        }
+        
         displayMessages(messages);
     } catch (error) {
         console.error('Error loading messages:', error);
-        // Don't show alert, just log the error
-        chatView.innerHTML = '<p class="error-message">Failed to load messages. Please try again.</p>';
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+            messagesContainer.innerHTML = '<div class="error-message">Failed to load messages. Please try again.</div>';
+        }
     }
 }
 
@@ -110,18 +122,33 @@ function displayMessages(messages) {
         return;
     }
     
-    messagesContainer.innerHTML = messages.map(message => `
-        <div class="message ${message.message_type}">
-            <div class="message-content">
-                <p>${message.text}</p>
-                <span class="message-time">${message.formatted_time}</span>
+    const formatTime = (timeStr) => {
+        if (!timeStr) return '';
+        try {
+            const date = new Date(timeStr);
+            return isNaN(date.getTime()) ? timeStr : date.toLocaleString();
+        } catch (e) {
+            console.warn('Error formatting time:', e);
+            return timeStr;
+        }
+    };
+
+    messagesContainer.innerHTML = messages.map(message => {
+        const messageType = message.type === 'SMS' ? 
+            (message.sender === 'Sent' ? 'sent' : 'received') : 
+            'chat';
+            
+        return `
+            <div class="message ${messageType}">
+                <div class="message-content">
+                    <p>${message.text || ''}</p>
+                    <span class="message-time">${formatTime(message.time)}</span>
+                    ${message.location ? `<small class="location">(${message.location})</small>` : ''}
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
     
-    // Clear any existing scroll position and scroll to bottom after a short delay
-    messagesContainer.scrollTop = 0;
-    setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }, 100);
+    // Scroll to bottom
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
