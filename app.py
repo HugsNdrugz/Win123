@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify, send_from_directory
 import sqlite3
 import os
 import logging
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -31,7 +32,8 @@ def get_chats():
                 'SMS' as type,
                 sms_type as sender,
                 text as last_message,
-                datetime(time, 'unixepoch') as formatted_time
+                time,
+                'avatar.png' as avatar
             FROM SMS 
             GROUP BY sms_type
             HAVING time = MAX(time)
@@ -40,11 +42,12 @@ def get_chats():
                 'Chat' as type,
                 sender,
                 text as last_message,
-                datetime(time, 'unixepoch') as formatted_time
+                time,
+                'avatar.png' as avatar
             FROM ChatMessages
             GROUP BY sender
             HAVING time = MAX(time)
-            ORDER BY formatted_time DESC;
+            ORDER BY time DESC;
         """
         
         cursor.execute(query)
@@ -54,8 +57,8 @@ def get_chats():
                 'type': row['type'],
                 'name': row['sender'],
                 'last_message': row['last_message'],
-                'time': row['formatted_time'],
-                'avatar': 'avatar.png'  # Default avatar
+                'time': row['time'],
+                'avatar': row['avatar']
             }
             chats.append(chat_dict)
             
@@ -75,26 +78,30 @@ def get_messages(sender):
         query = """
             SELECT 
                 'SMS' as type,
+                sms_type as sender,
                 text,
-                datetime(time, 'unixepoch') as formatted_time
+                time
             FROM SMS 
             WHERE sms_type = ?
             UNION ALL
             SELECT 
                 'Chat' as type,
+                sender,
                 text,
-                datetime(time, 'unixepoch') as formatted_time
+                time
             FROM ChatMessages
             WHERE sender = ?
-            ORDER BY formatted_time ASC;
+            ORDER BY time ASC;
         """
         
         cursor.execute(query, (sender, sender))
         messages = []
         for row in cursor.fetchall():
             message_dict = {
+                'type': row['type'],
+                'sender': row['sender'],
                 'text': row['text'],
-                'time': row['formatted_time'],
+                'time': row['time'],
                 'message_type': 'received' if row['type'] == 'SMS' else 'sent'
             }
             messages.append(message_dict)
@@ -114,7 +121,7 @@ def get_calls():
             SELECT 
                 call_type,
                 from_to,
-                datetime(time, 'unixepoch') as formatted_time,
+                time,
                 duration,
                 location
             FROM Calls 
@@ -136,7 +143,7 @@ def get_apps():
             SELECT 
                 application_name as name,
                 package_name,
-                datetime(install_date, 'unixepoch') as formatted_install_date
+                install_date as date
             FROM InstalledApps 
             ORDER BY install_date DESC;
         """
