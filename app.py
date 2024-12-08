@@ -20,35 +20,25 @@ def get_db():
 def index():
     return render_template('index.html')
 
-@app.route('/api/chats')
-def get_chats():
+@app.route('/api/conversations')
+def get_conversations():
     try:
-        logger.debug("Fetching chat list")
+        logger.debug("Fetching conversations list")
         db = get_db()
         cursor = db.cursor()
         
-        # Query to get latest messages from both SMS and ChatMessages
         query = """
-            SELECT 
-                'SMS' as type,
-                sms_type as sender,
-                text as last_message,
-                time,
-                'avatar.png' as avatar
-            FROM SMS 
-            GROUP BY sms_type
-            HAVING time = MAX(time)
-            UNION ALL
-            SELECT 
-                'Chat' as type,
-                sender,
-                text as last_message,
-                time,
-                'avatar.png' as avatar
-            FROM ChatMessages
-            GROUP BY sender
-            HAVING time = MAX(time)
-            ORDER BY time DESC;
+            SELECT c.contact_id, c.name, m.text AS last_message, MAX(m.time) AS last_time
+            FROM Contacts c
+            LEFT JOIN (
+                SELECT sender_contact_id AS contact_id, text, time
+                FROM ChatMessages
+                UNION
+                SELECT sender_contact_id AS contact_id, text, time
+                FROM SMS
+            ) m ON c.contact_id = m.contact_id
+            GROUP BY c.contact_id
+            ORDER BY last_time DESC;
         """
         
         logger.debug("Executing chat list query")
@@ -81,32 +71,21 @@ def get_chats():
         logger.error(f"Error fetching chats: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/messages/<sender>')
-def get_messages(sender):
+@app.route('/api/messages/<int:contact_id>')
+def get_messages(contact_id):
     try:
-        logger.debug(f"Fetching messages for sender: {sender}")
+        logger.debug(f"Fetching messages for contact_id: {contact_id}")
         db = get_db()
         cursor = db.cursor()
         
-        # Query to get messages from both SMS and ChatMessages for a specific sender
         query = """
-            SELECT 
-                'SMS' as type,
-                COALESCE(sms_type, from_to) as sender,
-                text,
-                time,
-                location
-            FROM SMS 
-            WHERE sms_type = ? OR from_to = ?
-            UNION ALL
-            SELECT 
-                'Chat' as type,
-                COALESCE(sender, messenger) as sender,
-                text,
-                time,
-                NULL as location
+            SELECT text, time, sender_contact_id, recipient_contact_id
             FROM ChatMessages
-            WHERE sender = ? OR messenger = ?
+            WHERE sender_contact_id = ? OR recipient_contact_id = ?
+            UNION
+            SELECT text, time, sender_contact_id, recipient_contact_id
+            FROM SMS
+            WHERE sender_contact_id = ? OR recipient_contact_id = ?
             ORDER BY time ASC;
         """
         

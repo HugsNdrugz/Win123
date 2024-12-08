@@ -16,13 +16,13 @@ function setupBackButton() {
     }
 }
 
-async function loadChats() {
+async function loadConversations() {
     try {
-        const response = await fetch('/api/chats');
+        const response = await fetch('/api/conversations');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const chats = await response.json();
+        const conversations = await response.json();
         if (!chats || chats.length === 0) {
             console.warn("No chat data received");
             return;
