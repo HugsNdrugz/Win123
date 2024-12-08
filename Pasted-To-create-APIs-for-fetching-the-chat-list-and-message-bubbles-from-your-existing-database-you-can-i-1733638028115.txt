@@ -1,0 +1,193 @@
+To create APIs for fetching the chat list and message bubbles from your existing database, you can implement the following in your Flask application. These APIs will allow your frontend to dynamically retrieve and display the relevant data.
+
+
+---
+
+1. API for Chat List
+
+This API retrieves a list of chats, grouped by contact, with the latest message (from both ChatMessages and SMS tables) for each contact.
+
+Implementation
+
+from flask import Flask, jsonify, request
+import sqlite3
+
+app = Flask(__name__)
+DATABASE = "data.db"
+
+def query_database(query, args=(), one=False):
+    """Utility function to query the database."""
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row  # Return results as dictionary-like objects
+    cur = conn.cursor()
+    cur.execute(query, args)
+    rows = cur.fetchall()
+    conn.close()
+    return (rows[0] if rows else None) if one else rows
+
+@app.route('/api/chat_list', methods=['GET'])
+def get_chat_list():
+    """Fetch a list of conversations grouped by contact."""
+    query = """
+        SELECT c.contact_id, c.name, m.last_message, m.last_time
+        FROM Contacts c
+        LEFT JOIN (
+            SELECT sender_contact_id AS contact_id, text AS last_message, MAX(time) AS last_time
+            FROM ChatMessages
+            GROUP BY sender_contact_id
+            UNION
+            SELECT sender_contact_id AS contact_id, text AS last_message, MAX(time) AS last_time
+            FROM SMS
+            GROUP BY sender_contact_id
+        ) m ON c.contact_id = m.contact_id
+        ORDER BY m.last_time DESC;
+    """
+    result = query_database(query)
+    chat_list = [dict(row) for row in result]  # Convert rows to dictionaries
+    return jsonify(chat_list)
+
+Expected Output
+
+The /api/chat_list endpoint returns a JSON object like this:
+
+[
+    {
+        "contact_id": 1,
+        "name": "John Doe",
+        "last_message": "See you tomorrow!",
+        "last_time": "2024-11-25 15:30:00"
+    },
+    {
+        "contact_id": 2,
+        "name": "Jane Smith",
+        "last_message": "How are you?",
+        "last_time": "2024-11-24 20:45:00"
+    }
+]
+
+
+---
+
+2. API for Message Bubbles
+
+This API fetches all messages (from ChatMessages and SMS) for a specific contact, sorted by time.
+
+Implementation
+
+@app.route('/api/messages/<int:contact_id>', methods=['GET'])
+def get_messages(contact_id):
+    """Fetch all messages for a specific contact."""
+    query = """
+        SELECT text, time, sender_contact_id, recipient_contact_id
+        FROM ChatMessages
+        WHERE sender_contact_id = :contact_id OR recipient_contact_id = :contact_id
+        UNION
+        SELECT text, time, sender_contact_id, recipient_contact_id
+        FROM SMS
+        WHERE sender_contact_id = :contact_id OR recipient_contact_id = :contact_id
+        ORDER BY time ASC;
+    """
+    result = query_database(query, {'contact_id': contact_id})
+    messages = [dict(row) for row in result]  # Convert rows to dictionaries
+    return jsonify(messages)
+
+Expected Output
+
+The /api/messages/<contact_id> endpoint returns a JSON object like this:
+
+[
+    {
+        "text": "Hey, how's it going?",
+        "time": "2024-11-25 14:15:00",
+        "sender_contact_id": 1,
+        "recipient_contact_id": 2
+    },
+    {
+        "text": "All good! You?",
+        "time": "2024-11-25 14:16:00",
+        "sender_contact_id": 2,
+        "recipient_contact_id": 1
+    }
+]
+
+
+---
+
+3. API for Contact Details
+
+If you need to fetch additional contact details when viewing a specific conversation:
+
+@app.route('/api/contact/<int:contact_id>', methods=['GET'])
+def get_contact(contact_id):
+    """Fetch contact details."""
+    query = """
+        SELECT name, phone_number, email, last_contacted
+        FROM Contacts
+        WHERE contact_id = :contact_id;
+    """
+    contact = query_database(query, {'contact_id': contact_id}, one=True)
+    return jsonify(dict(contact) if contact else {})
+
+Expected Output
+
+The /api/contact/<contact_id> endpoint returns a JSON object like this:
+
+{
+    "name": "John Doe",
+    "phone_number": "123-456-7890",
+    "email": "john.doe@example.com",
+    "last_contacted": "2024-11-20 18:30:00"
+}
+
+
+---
+
+4. Frontend Integration
+
+The frontend can use these APIs to build a Messenger-like interface. Here’s how:
+
+Chat List View
+
+1. Fetch data from /api/chat_list.
+
+
+2. Display a list of contacts with their latest message.
+
+
+3. Include an on-click event to fetch messages for a specific contact.
+
+
+
+Chat Messages View
+
+1. Fetch data from /api/messages/<contact_id> when a contact is clicked.
+
+
+2. Render messages as chat bubbles:
+
+Align messages sent by the user to the right.
+
+Align messages received to the left.
+
+
+
+3. Use the timestamp (time) to group messages by day if needed.
+
+
+
+
+---
+
+5. Additional Considerations
+
+Mobile-Friendly Design: Use a responsive framework like Bootstrap or Tailwind CSS to create a mobile-first design.
+
+Pagination: If there are many messages, implement pagination in /api/messages/<contact_id> using query parameters (?page=1&limit=20).
+
+Error Handling: Ensure the APIs handle cases where a contact or message is missing.
+
+Search: Add a search API to filter contacts by name or message content.
+
+
+This approach integrates your existing data into a clean and organized chat interface inspired by Facebook Messenger.
+
