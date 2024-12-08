@@ -1,6 +1,5 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, send_from_directory
 import sqlite3
-from datetime import datetime
 import os
 import logging
 
@@ -8,7 +7,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 db_path = os.path.join(os.getcwd(), 'data.db')
 
 def get_db():
@@ -16,126 +15,141 @@ def get_db():
     db.row_factory = sqlite3.Row
     return db
 
-def format_datetime(timestamp):
-    try:
-        if isinstance(timestamp, str):
-            dt_object = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-        else:
-            dt_object = datetime.fromtimestamp(timestamp)
-        return dt_object.strftime("%b %d, %I:%M %p")
-    except (ValueError, TypeError) as e:
-        logger.error(f"Error formatting timestamp {timestamp}: {str(e)}")
-        return str(timestamp)
-
-# Route: Home page
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# API: Get all chats
 @app.route('/api/chats')
 def get_chats():
     try:
         db = get_db()
         cursor = db.cursor()
         
-        # Query to get all conversations with their latest messages
+        # Query to get latest messages from both SMS and ChatMessages
         query = """
-            WITH LatestMessages AS (
-                SELECT 
-                    CASE
-                        WHEN sms_type IS NOT NULL THEN sms_type
-                        ELSE sender
-                    END as sender_name,
-                    text,
-                    CASE
-                        WHEN time LIKE '%+%' THEN strftime('%s', substr(time, 1, instr(time, '+') - 1))
-                        ELSE time
-                    END as timestamp,
-                    ROW_NUMBER() OVER (PARTITION BY CASE WHEN sms_type IS NOT NULL THEN sms_type ELSE sender END ORDER BY time DESC) as rn
-                FROM (
-                    SELECT sms_type, text, time, NULL as sender FROM SMS
-                    UNION ALL
-                    SELECT NULL as sms_type, text, time, sender FROM ChatMessages
-                )
-            )
             SELECT 
-                sender_name as name,
+                'SMS' as type,
+                sms_type as sender,
                 text as last_message,
-                datetime(timestamp, 'unixepoch') as time,
-                'avatar.png' as avatar,
-                1 as unread
-            FROM LatestMessages
-            WHERE rn = 1
-            ORDER BY timestamp DESC
+                datetime(time, 'unixepoch') as formatted_time
+            FROM SMS 
+            GROUP BY sms_type
+            HAVING time = MAX(time)
+            UNION ALL
+            SELECT 
+                'Chat' as type,
+                sender,
+                text as last_message,
+                datetime(time, 'unixepoch') as formatted_time
+            FROM ChatMessages
+            GROUP BY sender
+            HAVING time = MAX(time)
+            ORDER BY formatted_time DESC;
         """
         
         cursor.execute(query)
         chats = []
         for row in cursor.fetchall():
-            chat_dict = {}
-            for idx, col in enumerate(cursor.description):
-                chat_dict[col[0]] = row[idx]
+            chat_dict = {
+                'type': row['type'],
+                'name': row['sender'],
+                'last_message': row['last_message'],
+                'time': row['formatted_time'],
+                'avatar': 'avatar.png'  # Default avatar
+            }
             chats.append(chat_dict)
             
         logger.debug(f"Retrieved chats: {chats}")
         return jsonify(chats)
     except Exception as e:
         logger.error(f"Error fetching chats: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-# API: Get messages for a conversation
 @app.route('/api/messages/<sender>')
 def get_messages(sender):
     try:
         db = get_db()
         cursor = db.cursor()
         
+        # Query to get messages from both SMS and ChatMessages for a specific sender
         query = """
             SELECT 
+                'SMS' as type,
                 text,
-                datetime(time, 'unixepoch') as formatted_time,
-                CASE 
-                    WHEN type = 'SMS' THEN 'received'
-                    ELSE 'sent'
-                END as message_type
-            FROM (
-                SELECT text, time, 'SMS' as type FROM SMS WHERE sms_type = ?
-                UNION ALL
-                SELECT text, time, 'Chat' as type FROM ChatMessages WHERE sender = ?
-            )
-            ORDER BY time ASC
+                datetime(time, 'unixepoch') as formatted_time
+            FROM SMS 
+            WHERE sms_type = ?
+            UNION ALL
+            SELECT 
+                'Chat' as type,
+                text,
+                datetime(time, 'unixepoch') as formatted_time
+            FROM ChatMessages
+            WHERE sender = ?
+            ORDER BY formatted_time ASC;
         """
         
         cursor.execute(query, (sender, sender))
-        messages = [dict(row) for row in cursor.fetchall()]
-        
+        messages = []
+        for row in cursor.fetchall():
+            message_dict = {
+                'text': row['text'],
+                'time': row['formatted_time'],
+                'message_type': 'received' if row['type'] == 'SMS' else 'sent'
+            }
+            messages.append(message_dict)
+            
+        logger.debug(f"Retrieved messages for {sender}: {messages}")
         return jsonify(messages)
     except Exception as e:
         logger.error(f"Error fetching messages: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-# Route: Calls View
-@app.route('/calls')
-def calls():
-    query = "SELECT call_type, from_to, time, duration FROM Calls ORDER BY time DESC"
-    calls = fetch_query(query)
-    formatted_calls = [
-        {"type": call_type, "from_to": from_to, "time": format_datetime(time), "duration": duration}
-        for call_type, from_to, time, duration in calls
-    ]
-    return render_template('calls.html', calls=formatted_calls)
+@app.route('/api/calls')
+def get_calls():
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        query = """
+            SELECT 
+                call_type,
+                from_to,
+                datetime(time, 'unixepoch') as formatted_time,
+                duration,
+                location
+            FROM Calls 
+            ORDER BY time DESC;
+        """
+        cursor.execute(query)
+        calls = [dict(row) for row in cursor.fetchall()]
+        return jsonify(calls)
+    except Exception as e:
+        logger.error(f"Error fetching calls: {e}")
+        return jsonify({"error": str(e)}), 500
 
-# Route: Apps View
-@app.route('/apps')
-def apps():
-    query = "SELECT application_name, install_date FROM InstalledApps ORDER BY install_date DESC"
-    apps = fetch_query(query)
-    formatted_apps = [
-        {"name": app_name, "date": format_datetime(install_date)}
-        for app_name, install_date in apps
-    ]
-    return render_template('apps.html', apps=formatted_apps)
+@app.route('/api/apps')
+def get_apps():
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        query = """
+            SELECT 
+                application_name as name,
+                package_name,
+                datetime(install_date, 'unixepoch') as formatted_install_date
+            FROM InstalledApps 
+            ORDER BY install_date DESC;
+        """
+        cursor.execute(query)
+        apps = [dict(row) for row in cursor.fetchall()]
+        return jsonify(apps)
+    except Exception as e:
+        logger.error(f"Error fetching apps: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/static/<path:path>')
+def serve_static(path):
+    return send_from_directory(app.static_folder, path)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
