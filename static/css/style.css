@@ -45,28 +45,11 @@ body {
 
 .content-container {
     flex: 1;
-    position: relative;
+    display: flex;
     overflow: hidden;
 }
 
-.content-view {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: none;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-}
-
-.content-view.active {
-    display: flex;
-    opacity: 1;
-}
-
-.conversations-view,
-.sms-view {
+.conversations-view {
     display: flex;
     width: 100%;
     height: 100%;

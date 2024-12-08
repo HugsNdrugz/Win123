@@ -8,14 +8,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.static_folder = 'static'
 DATABASE = 'data.db'
-
-# Add node_modules to static files
-import os
-node_modules_path = os.path.join('node_modules')
-if os.path.exists(node_modules_path):
-    app.static_folder = os.path.dirname(node_modules_path)
 
 def get_db():
     db = getattr(g, '_database', None)

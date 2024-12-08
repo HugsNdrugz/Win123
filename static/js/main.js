@@ -1,29 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Application initialized');
-    initializeNavigation();
     loadContacts(); // Load contacts by default
-});
 
-function initializeNavigation() {
+    // Set up navigation handling
     const navigationBar = document.querySelector('md-navigation-bar');
-    const contentViews = document.querySelectorAll('.content-view');
-    
     navigationBar.addEventListener('click', (event) => {
         const tab = event.target.closest('md-navigation-tab');
         if (tab) {
             const section = tab.getAttribute('data-tab');
-            switchToSection(section);
+            loadSection(section);
         }
     });
-}
+});
 
-async function switchToSection(section) {
-    // Update active section
-    document.querySelectorAll('.content-view').forEach(view => {
-        view.classList.toggle('active', view.getAttribute('data-section') === section);
-    });
+async function loadSection(section) {
+    const contentDiv = document.getElementById('content');
 
-    // Load content based on section
     switch(section) {
         case 'chat':
         case 'sms':

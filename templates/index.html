@@ -24,7 +24,7 @@
         
         <main class="content-area">
             <div id="content" class="content-container">
-                <div class="content-view conversations-view active" data-section="chat">
+                <div class="conversations-view active">
                     <div class="contact-list">
                         <!-- Contact cards will be loaded here -->
                     </div>
@@ -35,38 +35,14 @@
                         </div>
                     </div>
                 </div>
-                
-                <div class="content-view sms-view" data-section="sms">
-                    <div class="contact-list">
-                        <!-- SMS contacts will be loaded here -->
-                    </div>
-                    <div class="messages-panel">
-                        <div class="no-conversation-selected">
-                            <span class="material-icons">sms</span>
-                            <p>Select an SMS conversation to start</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-view calls-view" data-section="calls">
-                    <div class="calls-list">
-                        <!-- Call logs will be loaded here -->
-                    </div>
-                </div>
-
-                <div class="content-view apps-view" data-section="apps">
-                    <div class="apps-grid">
-                        <!-- Apps will be loaded here -->
-                    </div>
-                </div>
             </div>
         </main>
     </div>
     
     <script type="module">
-        import '/static/node_modules/@material/web/navigationbar/navigation-bar.js';
-        import '/static/node_modules/@material/web/navigationbar/navigation-tab.js';
-        import '/static/node_modules/@material/web/icon/icon.js';
+        import '@material/web/navigationbar/navigation-bar.js';
+        import '@material/web/navigationbar/navigation-tab.js';
+        import '@material/web/icon/icon.js';
     </script>
     <script src="/static/js/main.js"></script>
 </body>
