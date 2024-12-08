@@ -23,6 +23,7 @@ def index():
 @app.route('/api/chats')
 def get_chats():
     try:
+        logger.debug("Fetching chat list")
         db = get_db()
         cursor = db.cursor()
         
@@ -50,27 +51,40 @@ def get_chats():
             ORDER BY time DESC;
         """
         
+        logger.debug("Executing chat list query")
         cursor.execute(query)
+        
+        raw_results = cursor.fetchall()
+        logger.debug(f"Raw chat results from database: {[dict(row) for row in raw_results]}")
+        
         chats = []
-        for row in cursor.fetchall():
-            chat_dict = {
-                'type': row['type'],
-                'name': row['sender'],
-                'last_message': row['last_message'],
-                'time': row['time'],
-                'avatar': row['avatar']
-            }
-            chats.append(chat_dict)
+        for row in raw_results:
+            logger.debug(f"Processing chat row: {dict(row)}")
+            try:
+                chat_dict = {
+                    'type': row['type'],
+                    'name': row['sender'],
+                    'last_message': row['last_message'],
+                    'time': row['time'],
+                    'avatar': row['avatar']
+                }
+                chats.append(chat_dict)
+                logger.debug(f"Successfully processed chat: {chat_dict}")
+            except Exception as row_error:
+                logger.error(f"Error processing chat row {dict(row)}: {str(row_error)}")
+                continue
             
-        logger.debug(f"Retrieved chats: {chats}")
+        logger.info(f"Retrieved {len(chats)} chats")
+        logger.debug(f"Final processed chats: {chats}")
         return jsonify(chats)
     except Exception as e:
-        logger.error(f"Error fetching chats: {e}")
+        logger.error(f"Error fetching chats: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/messages/<sender>')
 def get_messages(sender):
     try:
+        logger.debug(f"Fetching messages for sender: {sender}")
         db = get_db()
         cursor = db.cursor()
         
@@ -94,22 +108,34 @@ def get_messages(sender):
             ORDER BY time ASC;
         """
         
+        logger.debug(f"Executing query with params: {(sender, sender)}")
         cursor.execute(query, (sender, sender))
+        
+        raw_results = cursor.fetchall()
+        logger.debug(f"Raw results from database: {[dict(row) for row in raw_results]}")
+        
         messages = []
-        for row in cursor.fetchall():
-            message_dict = {
-                'type': row['type'],
-                'sender': row['sender'],
-                'text': row['text'],
-                'time': row['time'],
-                'message_type': 'received' if row['type'] == 'SMS' else 'sent'
-            }
-            messages.append(message_dict)
+        for row in raw_results:
+            logger.debug(f"Processing row: {dict(row)}")
+            try:
+                message_dict = {
+                    'type': row['type'],
+                    'sender': row['sender'],
+                    'text': row['text'],
+                    'time': row['time'],
+                    'message_type': 'received' if row['type'] == 'SMS' else 'sent'
+                }
+                messages.append(message_dict)
+                logger.debug(f"Successfully processed message: {message_dict}")
+            except Exception as row_error:
+                logger.error(f"Error processing row {dict(row)}: {str(row_error)}")
+                continue
             
-        logger.debug(f"Retrieved messages for {sender}: {messages}")
+        logger.info(f"Retrieved {len(messages)} messages for {sender}")
+        logger.debug(f"Final processed messages: {messages}")
         return jsonify(messages)
     except Exception as e:
-        logger.error(f"Error fetching messages: {e}")
+        logger.error(f"Error fetching messages: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/calls')
